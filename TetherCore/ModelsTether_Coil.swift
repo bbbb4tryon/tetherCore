@@ -28,7 +28,7 @@ struct Coil: Identifiable, Codable {
     var tether2: Tether
     var isCompleted: Bool
     var timeStamp: Date
-    init(tether1: Tether, tether2: Tether, isCompleted: Bool, timeStamp: Date) {
+    init(tether1: Tether, tether2: Tether, _ isCompleted: Bool, _ timeStamp: Date) {
         self.id = UUID()
         self.tether1 = tether1
         self.tether2 = tether2

@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SwiftUI
 
 // MARK: - CoreViewModel
 /// CoreViewModel
@@ -15,7 +16,9 @@ class CoreViewModel: ObservableObject {
     @Published private(set) var error: GlobalError?
     @Published var currentTetherText: String = ""
     @Published var currentCoil: Coil?
-    
+    @Published var temporaryTether: Tether?
+    @Published var showTimer: Bool = false
+    @Published var timerSeconds: Int = 1200     /// 20 minutes
     @Published var currentModal: ModalType?
     
     private let storage: TetherStorageManager
@@ -23,7 +26,32 @@ class CoreViewModel: ObservableObject {
         self.storage = storage
     }
     
+    /// Flow of tethers/input
+    func submitTether() {
+        guard !currentTetherText.isEmpty else { return }
+        
+        let newTether = Tether(tetherText: currentTetherText)
+        
+        if temporaryTether == nil {
+            temporaryTether = newTether
+        } else {
+            ///Create coil when second tether is submitted/added
+            if let firstTether = temporaryTether {
+                currentCoil = Coil(tether1: firstTether, tether2: newTether )
+                temporaryTether = nil
+                showTimer = true
+                startTimer()
+            }
+        }
+        currentTetherText = ""
+    }
     
+    private func startTimer() {
+        /// Timer animation to show
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            showTimer = true
+        }
+    }
     
     /// When Timer is Complete!
     func onTimerComplete() {
