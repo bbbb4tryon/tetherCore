@@ -14,10 +14,26 @@ import Foundation
 class CoreViewModel: ObservableObject {
     @Published private(set) var error: GlobalError?
     @Published var currentTetherText: String = ""
+    @Published var currentCoil: Coil?
+    
+    @Published var currentModal: ModalType?
     
     private let storage: TetherStorageManager
     init(storage: TetherStorageManager = TetherStorageManager()){
         self.storage = storage
+    }
+    
+    
+    
+    /// When Timer is Complete!
+    func onTimerComplete() {
+        if let coil = currentCoil {
+            if !coil.tether1.isCompleted {
+                currentModal = .tether1
+            } else if !coil.tether2.isCompleted {
+                currentModal = .tether2
+            }
+        }
     }
 
     /// Manage error state

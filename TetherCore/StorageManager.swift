@@ -9,21 +9,29 @@ import Foundation
 
 //[Protocol][Conformance StorageManaging][Storage][-> Void]
 actor TetherStorageManager {
-    //func save <T: Codable> (_value string key string throws
-//    func save <T: Codable> (_ value: String, forKey: String) throws {
-        //func load <T: Codable>( forkey key string) throws -> T?
+    private let defaults = UserDefaults.standard
+    private let coilsKey = "stored_coils"
+    private let maxCoils = 25
+    
+    func saveCoil(_ coil: Coil) async throws {
+        var coils = await loadCoils()
+        coils.insert(coil, at: 0)
         
-        //[Class][NSObject][StorageManagingProtocol][Storage][-> Void]
-        //final class StorageManger: StorageManaging
-        // private let defaults: UserDefaults
-        // init UserDefaults = .standard self.defaults = defaults
-        // func save <T: Codable> (_value string key string) throws
-        // let encoder = jsonencodr()
-        //let data = try encoder.encode(value)
-        //defaults.set(data, forkey: key)
+        ///Maintain max limit
+        if coils.count > maxCoils {
+            coils = Array(coils.prefix(maxCoils))
+        }
         
-        //func load<T: Codable>(forkey: key: string) throws -> T?
-        // guard let data = defaults.data(forkey: key) else return nil
-        // return try jsonencoder().decode(T.self, from: data)
-//    }
+        let encoder = JSONEncoder()
+        let data = try encoder.encode(coils)
+        defaults.set(data, forKey: coilsKey)
+    }
+    
+    func loadCoils() async -> [Coil] {
+        guard let data = defaults.data(forKey: coilsKey),
+              let coils = try? JSONDecoder().decode([Coil].self, from: data) else {
+            return []
+        }
+        return coils
+    }
 }

@@ -11,12 +11,12 @@ import SwiftUI
 struct Tether: Identifiable, Codable {
     let id: UUID
     var tetherText: String
-    var completionStatus: Bool
+    var isCompleted: Bool
     var timeStamp: Date
-    init(tetherText: String, completionStatus: Bool = false){
+    init(tetherText: String, isCompleted: Bool = false){
         self.id = UUID()
         self.tetherText = tetherText
-        self.completionStatus = completionStatus
+        self.isCompleted = isCompleted
         self.timeStamp = Date()
     }
 }
@@ -26,13 +26,13 @@ struct Coil: Identifiable, Codable {
     let id: UUID
     var tether1: Tether
     var tether2: Tether
-    var completionStatus: Bool
+    var isCompleted: Bool
     var timeStamp: Date
-    init(tether1: Tether, tether2: Tether, completionStatus: Bool, timeStamp: Date) {
+    init(tether1: Tether, tether2: Tether, isCompleted: Bool, timeStamp: Date) {
         self.id = UUID()
         self.tether1 = tether1
         self.tether2 = tether2
-        self.completionStatus = false
+        self.isCompleted = false
         self.timeStamp = Date()
     }
 }
