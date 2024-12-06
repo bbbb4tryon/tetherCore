@@ -15,16 +15,18 @@ actor TetherStorageManager {
     
     func saveCoil(_ coil: Coil) async throws {
         var coils = await loadCoils()
-        coils.insert(coil, at: 0)
+        coils.insert(coil, at: 0)   ///Adds new coil at the top
         
         ///Maintain max limit
         if coils.count > maxCoils {
             coils = Array(coils.prefix(maxCoils))
         }
         
+        /// Saves the coils - Do not need another or any save()
         let encoder = JSONEncoder()
         let data = try encoder.encode(coils)
         defaults.set(data, forKey: coilsKey)
+
     }
     
     func loadCoils() async -> [Coil] {
