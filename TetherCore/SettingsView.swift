@@ -95,6 +95,6 @@ enum HapticStyle: String, CaseIterable, Identifiable {
         }
     }
 }
-#Preview {
-    SettingsView()
-}
+//#Preview {
+//    SettingsView()
+//}
