@@ -12,7 +12,7 @@ import SwiftUI
 struct TetherCoreApp: App {
     var body: some Scene {
         WindowGroup {
-            CoreView()
+            MainTabView()
         }
     }
 }

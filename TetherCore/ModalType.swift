@@ -7,7 +7,7 @@
 
 import Foundation
 
-enum ModalType {
+enum ModalType: Identifiable {
     case tether1
     case tether2
     case completion

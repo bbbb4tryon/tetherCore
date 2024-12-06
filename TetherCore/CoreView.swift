@@ -30,6 +30,14 @@ struct CoreView: View {
             actions: { Button("OK") { coreVM.clearError() }},
             message: { Text(coreVM.error?.message ?? "" )}
         )
+        .sheet(item: $coreVM.currentModal) { modalType in
+            ModalView(
+                type: modalType,
+                onComplete: { coreVM.handleModalAction(for: modalType, action: .complete) },
+                onInProgress: { coreVM.handleModalAction(for: modalType, action: .inProgress) },
+                onCancel: { coreVM.handleModalAction(for: modalType, action: .cancel) }
+            )
+        }
     }
     private var header: some View {
         get {
@@ -53,11 +61,13 @@ struct CoreView: View {
             .focused($field)
             .onSubmit {
                 buttonWasPressed = true     //JUST the action, not the whole button view
+                coreVM.submitTether()
             }
     }
     private var toSubmit_Button: some View {
         Button(action: {
             buttonWasPressed = true //Ties a Declaration/State + public, for testing; then see testButton() in testing
+            coreVM.submitTether()
         }){
             Text("Done")
                 .fontWeight(.semibold)

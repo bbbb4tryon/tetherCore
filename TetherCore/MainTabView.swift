@@ -13,7 +13,7 @@ struct MainTabView: View {
     var body: some View {
         ZStack(alignment: .top) {
             TabView(selection: $selectedTab) {
-                HomeView()
+                CoreView()
                     .tabItem {
                         Image(systemName: "house.fill")
                         Text("Home")
@@ -29,11 +29,12 @@ struct MainTabView: View {
                 
              SettingsView()
                     .tabItem {
-                        Image(systemName: "gear.fill")
+                        Image(systemName: "gear")
                         Text("Settings")
                     }
                     .tag(2)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .accentColor(Color.theme.primaryBlue)
             
             ///Top Navigation Bar
@@ -71,4 +72,6 @@ struct MainTabView: View {
 
 #Preview {
     MainTabView()
+        .previewDevice(PreviewDevice(rawValue: "iPhone 15 Pro"))
+        .previewDisplayName("iPhone 15 Pro")
 }
