@@ -28,12 +28,20 @@ struct Coil: Identifiable, Codable {
     var tether2: Tether
     var isCompleted: Bool
     var timeStamp: Date
-    init(tether1: Tether, tether2: Tether, _ isCompleted: Bool, _ timeStamp: Date) {
+    init(tether1: Tether, tether2: Tether, isCompleted: Bool = false, _ timeStamp: Date = Date()) {
         self.id = UUID()
         self.tether1 = tether1
         self.tether2 = tether2
-        self.isCompleted = false
-        self.timeStamp = Date()
+        self.isCompleted = isCompleted  ///Default false provided in init -- avoids compiler complaining "need all params"
+        self.timeStamp = timeStamp       ///Default false provided in init -- avoids compiler complaining "need all params"
+    }
+    var formattedTimestamp: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MM/dd HH:mm"
+        formatter.timeZone = TimeZone.current   ///Handles both US and China
+        return formatter.string(from: timeStamp)
     }
 }
+
+
 

@@ -16,10 +16,11 @@ struct CoreView: View {
     
     var body: some View {
         VStack {
-            Image(systemName: "globe")
             header
             input
+            toSubmit_Button
         }
+        .padding()
         .alert(
             "Error",
             isPresented: Binding(
@@ -33,28 +34,45 @@ struct CoreView: View {
     private var header: some View {
         get {
             Text("Pull yourself back to center")
-                .font(.largeTitle)
-                .fontWeight(.bold)
+                .font(.system(size: 34, weight: .bold, design: .rounded))
+                .foregroundColor(.theme.primaryBlue)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: 300)
+                .padding(.vertical, 20)
+                .shadow(color: Color.theme.primaryBlue.opacity(0.2), radius: 2, y: 2)
+                .animation(.easeInOut, value: buttonWasPressed)
         }
     }
     private var input: some View {
-        TextField(
-            "Required",
-            text: $coreVM.currentTetherText
-        )
-        .accessibilityIdentifier("Required")
-        .focused($field)
-        .onSubmit {
-            buttonWasPressed = true     //JUST the action, not the whole button view
-        }
+        TextField( "Required", text: $coreVM.currentTetherText )
+            .accessibilityIdentifier("Required")
+            .textFieldStyle(.roundedBorder)
+            .padding(.horizontal, 20)
+            .frame(maxWidth: 300)
+            .shadow(color: Color.theme.primaryBlue.opacity(0.1), radius: 5)
+            .focused($field)
+            .onSubmit {
+                buttonWasPressed = true     //JUST the action, not the whole button view
+            }
     }
     private var toSubmit_Button: some View {
         Button(action: {
             buttonWasPressed = true //Ties a Declaration/State + public, for testing; then see testButton() in testing
         }){
             Text("Done")
+                .fontWeight(.semibold)
+                .foregroundStyle(Color.theme.buttonText)
+                .padding(.horizontal, 40)
+                .padding(.vertical, 12)
         }
         .accessibilityIdentifier("Done")
+        .background(
+            RoundedRectangle(cornerRadius: 25)
+                .fill(Color.theme.primaryBlue)
+        )
+        .shadow(radius: 5)
+        .opacity(coreVM.currentTetherText.isEmpty ? 0.6 : 1)
+        .animation(.easeInOut, value: coreVM.currentTetherText.isEmpty)
     }
 }
 #Preview {
