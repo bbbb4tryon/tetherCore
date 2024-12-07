@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Foundation
 
 
 struct CoreView: View {
@@ -13,11 +14,12 @@ struct CoreView: View {
     /// - Note: Conforms to Error, GlobalError, and LocalizedError protocols
     @FocusState private var field: Bool
     @State public var buttonWasPressed = false  //Making a Declaration/State + public, for testing
+    let show: Bool = false
     
     var body: some View {
         VStack {
             header
-            input
+            show.seeInputs = true
             toSubmit_Button
         }
         .padding()
@@ -52,7 +54,7 @@ struct CoreView: View {
         }
     }
     private var input: some View {
-        TextField( "Required", text: $coreVM.currentTetherText )
+        TextField(instructions, text: $coreVM.currentTetherText )
             .accessibilityIdentifier("Required")
             .textFieldStyle(.roundedBorder)
             .padding(.horizontal, 20)
@@ -64,10 +66,23 @@ struct CoreView: View {
                 coreVM.submitTether()
             }
     }
+    private var seeInputs: some View {
+        Text("\(See.required)")
+        
+        Text("\($See.oneMore)")
+            .strikethrough(coil.tether1.isCompleted)
+    }
+    private var instructions: some View {
+        if toSubmit_Button.buttonWasPressed {
+            TextField("Enter One More")
+        } else {
+            TextField("Required")
+        }
+    }
     private var toSubmit_Button: some View {
         Button(action: {
-            buttonWasPressed = true //Ties a Declaration/State + public, for testing; then see testButton() in testing
-            coreVM.submitTether()
+            buttonWasPressed = true     ///tied to @State, is 'public' for testing via `testButton()` in testing
+            coreVM.submitTether()       ///this calls submit
         }){
             Text("Done")
                 .fontWeight(.semibold)
@@ -85,6 +100,12 @@ struct CoreView: View {
         .animation(.easeInOut, value: coreVM.currentTetherText.isEmpty)
     }
 }
+
+enum See {
+    case required
+    case oneMore
+}
+
 #Preview {
     CoreView()
 }

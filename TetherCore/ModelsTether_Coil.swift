@@ -21,7 +21,7 @@ struct Tether: Identifiable, Codable {
     }
 }
 
-///[Mode: 'ModelCoil'][Conformance: Identifiable, Codable]['Storage' Data Type][-> Tether]
+///[Model: 'ModelCoil'][Conformance: Identifiable, Codable]['Storage' Data Type][-> Tether]
 struct Coil: Identifiable, Codable {
     let id: UUID
     var tether1: Tether
@@ -43,5 +43,5 @@ struct Coil: Identifiable, Codable {
     }
 }
 
-
+///[Model:
 

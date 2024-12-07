@@ -12,18 +12,25 @@ struct ModalView: View {
     let onComplete: () -> Void
     let onInProgress: () -> Void
     let onCancel: () -> Void
+    private let storage = TetherStorageManager()        ///storage a regular property
+    private let coreVM = CoreViewModel()
+//    @State private var tetherInsert: [Tether] = []
+    var tether: Tether
     @Environment(\.dismiss) private var dismiss
-    @State private var notes: String = ""
     
     var body: some View {
         VStack(spacing: 20) {
             Text(title)
                 .font(.headline)
-            
-            TextField("Add notes...", text: $notes)
-                .textFieldStyle(.roundedBorder)
-                .padding()
-            
+            List {
+                ForEach(tether.tetherText) { tether in
+                    Tether(tether: coreVM.newTether)
+                }
+            }
+            .task {
+                let showThenAdd = await tether.init()
+                tInput = showThenAdd.tetherText
+            }
             HStack(spacing: 20) {
                 Button("Cancel") {
                     onCancel()
@@ -51,8 +58,8 @@ struct ModalView: View {
     
     private var title: String {
         switch type {
-        case .tether1: return "Complete First Task"
-        case .tether2: return "Complete Second Task"
+        case .tether1: return "Tethered to:"
+        case .tether2: return "Tethered to:"
         case .completion: return "All Tasks Complete!"
         case .breakPrompt: return "Take a Break?"
         case .mindfulness: return "Mindfulness Check"

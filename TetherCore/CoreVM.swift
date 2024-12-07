@@ -22,7 +22,9 @@ class CoreViewModel: ObservableObject {
     @Published var currentModal: ModalType?
     
     private let storage: TetherStorageManager
-    init(storage: TetherStorageManager = TetherStorageManager()){
+    init(
+        storage: TetherStorageManager = TetherStorageManager()
+    ){
         self.storage = storage
     }
     
@@ -38,19 +40,32 @@ class CoreViewModel: ObservableObject {
             ///Create coil when second tether is submitted/added
             if let firstTether = temporaryTether {
                 currentCoil = Coil(tether1: firstTether, tether2: newTether )
+                Task {
+                    try? await storage.saveCoil(currentCoil!)   ///Save the coil
+                }
                 temporaryTether = nil
                 showTimer = true
                 startTimer()
+                currentModal = .tether1
             }
         }
         currentTetherText = ""
     }
     
     private func startTimer() {
-        /// Timer animation to show
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-            showTimer = true
-        }
+        ///Timer countdown
+            Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true){ timer in
+                if self.timerSeconds > 0 {
+                    self.timerSeconds -= 1
+                } else {
+                    timer.invalidate()
+                    self.onTimerComplete()
+                }
+            }
+            /// Timer animation to show
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                showTimer = true
+            }
     }
     
     /// When Timer is Complete!

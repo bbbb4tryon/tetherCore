@@ -8,8 +8,9 @@
 import SwiftUI
 
 struct ProfileView: View {
-    private let storage = TetherStorageManager()        ///storage a regular property
-    @State private var coils: [Coil] = []             ///@State remains for coils array to trigger UI updates
+    private let storage = TetherStorageManager()  ///storage a regular property
+    @State private var intendedCoils: [Coil] = []         ///@State remains for coils array to trigger UI updates
+    @State private var completedCoils: [Coil] = []
     
     var body: some View {
         NavigationStack {
@@ -22,27 +23,38 @@ struct ProfileView: View {
                     .padding(.vertical, 20)
                     .shadow(color: Color.theme.primaryBlue.opacity(0.2), radius: 2, y: 2)
                 
-                List(coils) { coil in
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Created: \(coil.formattedTimestamp)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        
-                        Text("1. \(coil.tether1.tetherText)")
-                            .strikethrough(coil.tether1.isCompleted)
-                        
-                        Text("2. \(coil.tether2.tetherText)")
-                            .strikethrough(coil.tether2.isCompleted)
+                List {
+                    Section("Intended Actions") {
+                        ForEach(intendedCoils) { coil in
+                            CoilRowView(coil: coil)
+                        }
+                    }
+                    
+                    Section("Completed Actions") {
+                        ForEach(completedCoils) { coil in
+                            CoilRowView(coil: coil)
+                        }
                     }
                 }
-                .navigationTitle("History")
                 .task {
-                    coils = await storage.loadCoils()
+                    let allCoils = await storage.loadCoils()
+                    intendedCoils = allCoils.filter { !$0.isCompleted }
+                    completedCoils = allCoils.filter { !$0.isCompleted }
                 }
             }
         }
     }
-}
+        func moveCoilToCompleted(_ coil: Coil) async {
+            var movingDown = coil
+            movingDown.isCompleted = true
+            completedCoils.insert(movingDown, at: 0)
+            intendedCoils.removeAll { $0.id == coil.id }
+            
+            if completedCoils.count > storage.maxCoils {
+                completedCoils.removeLast()
+            }
+        }
+    }
 
 #Preview {
     ProfileView()
