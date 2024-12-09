@@ -67,10 +67,12 @@ class CoreViewModel: ObservableObject {
     // MARK: Timer Management
     /// "Timer Management"
     private func startTimer() async {   /// [Function][Timer][CoreVM][-> Void]
-        await mainTimer.start { @MainActor in
-            self.timerSeconds -= 1
-            if self.timerSeconds == 0 {
-                self.onTimerComplete()
+        await mainTimer.start {
+            Task {
+                self.timerSeconds -= 1
+                if self.timerSeconds == 0 {
+                    self.onTimerComplete()
+                }
             }
         }
         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
@@ -98,6 +100,7 @@ class CoreViewModel: ObservableObject {
             
         case (.tether1, .inProgress):
             currentModal = nil
+            Task { await pauseTimer() }
             resetAndStartTimer()
             
         case (.tether2, .complete):
@@ -106,6 +109,7 @@ class CoreViewModel: ObservableObject {
             
         case (.tether2, .inProgress):
             currentModal = nil
+            Task { await pauseTimer() }
             resetAndStartTimer()
             
         case (.completion, .complete):
@@ -120,6 +124,7 @@ class CoreViewModel: ObservableObject {
             // Handle social post completion
             resetAll()
             currentModal = nil
+            
         case (.breakPrompt, .complete):
             break
         case (.mindfulness, .complete):
@@ -135,6 +140,7 @@ class CoreViewModel: ObservableObject {
         case (_, .cancel):
             currentModal = nil
         }
+
     }
         
         private func resetAndStartTimer() {
