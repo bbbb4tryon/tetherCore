@@ -147,6 +147,7 @@ class CoreViewModel: ObservableObject {
         }
         
         private func resetAll() {
+            Task { await mainTimer.stop() } ///Use TimerActor to stop timer completely
             currentModal = nil
             currentCoil = nil
             temporaryTether = nil
