@@ -82,9 +82,10 @@ class CoreViewModel: ObservableObject {
     
     private func resetAndStartTimer() { /// [Function][Timer][CoreVM][->Void]
         timerSeconds = 1200
-        Task {
-            await startTimer()
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            showTimer = true
         }
+        Task { await startTimer() }
     }
     
     private func pauseTimer() async {    /// [Function][Timer][CoreVM][-> Void]
@@ -137,14 +138,6 @@ class CoreViewModel: ObservableObject {
             currentModal = nil
         }
     }
-        ///
-        private func resetAndStartTimer() {
-            timerSeconds = 1200
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                showTimer = true
-            }
-            startTimer()
-        }
         
         private func resetAll() {
             Task { await mainTimer.stop() } ///Use TimerActor to stop timer completely
