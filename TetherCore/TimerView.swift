@@ -35,6 +35,6 @@ struct TimerView: View {
         }
     }
 
-#Preview {
-    TimerView(seconds: 20)
-}
+//#Preview {
+//    TimerView(seconds: $seconds)
+//}

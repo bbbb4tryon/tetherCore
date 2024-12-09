@@ -46,19 +46,22 @@ class CoreViewModel: ObservableObject {
         
         if temporaryTether == nil {
             temporaryTether = newTether
-        } else {
+        } else if let firstTether = temporaryTether {
             ///Create coil when second tether is submitted/added
-            if let firstTether = temporaryTether {
-                currentCoil = Coil(tether1: firstTether, tether2: newTether )
+            let coil = Coil(tether1: firstTether, tether2: newTether)
+            ///Save the coil
                 Task {
-                    try? await storage.saveCoil(currentCoil!)   ///Save the coil
+                    try? await storage.saveCoil(coil)
                 }
+            ///Start timer & show first modal
                 temporaryTether = nil
-                /// Timer animation to show
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    
                     showTimer = true
                 }
-                Task { await startTimer() }
+            Task {
+                await startTimer()
+                currentModal = .tether1
             }
         }
         currentTetherText = ""

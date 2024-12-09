@@ -14,7 +14,6 @@ struct DisplayUnderInput: View {
     var body: some View {
         HStack {
             Text(tether.tetherText)
-                .foregroundStyle(Color.theme.secondaryGreen)
             Spacer()
             Button(action: onClear) {
                 Image(systemName: "xmark.circle.fill")

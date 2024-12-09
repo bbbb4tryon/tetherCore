@@ -23,10 +23,19 @@ struct CoreView: View {
         VStack(spacing: 20){
             header
             input
-            ///Show first tether, if it is entered
-            if let tether = coreVM.temporaryTether {
-                DisplayUnderInput(tether: tether, onClear:  coreVM.clearTetherUponMistake)
+            
+            VStack(alignment: .leading,spacing: 10){
+                ///Show first tether, if it is entered
+                if let tether = coreVM.temporaryTether {
+                    DisplayUnderInput(tether: tether, onClear:  coreVM.clearTetherUponMistake)
+                        .foregroundStyle(Color.theme.primaryBlue)
+                }
+                if let coil = coreVM.currentCoil {
+                    Text("\(coil.tether2.tetherText)")
+                        .foregroundStyle(Color.theme.secondaryGreen)
+                }
             }
+           
             toSubmit_Button
             ///Pushes content up ~ vertical centering
             Spacer()
@@ -47,7 +56,8 @@ struct CoreView: View {
                 type: modalType,
                 onComplete: { coreVM.handleModalAction(for: modalType, action: .complete) },
                 onInProgress: { coreVM.handleModalAction(for: modalType, action: .inProgress) },
-                onCancel: { coreVM.handleModalAction(for: modalType, action: .cancel) },
+                onCancel: { coreVM.handleModalAction(for: modalType, action: .cancel
+                ) },
                 coreVM: coreVM
             )
         }
