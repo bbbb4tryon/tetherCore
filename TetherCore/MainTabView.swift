@@ -27,7 +27,7 @@ struct MainTabView: View {
                     }
                     .tag(1)
                 
-             SettingsView()
+                SettingsView()
                     .tabItem {
                         Image(systemName: "gear")
                         Text("Settings")

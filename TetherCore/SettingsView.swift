@@ -8,57 +8,17 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @AppStorage("deviceID") private var useDeviceID = (UIDevice.current.identifierForVendor?.uuidString ?? "Not Available")
-    @AppStorage("notificationsEnabled") private var notificationsEnabled = true
-    @AppStorage("timerHaptics") private var timerHaptics = HapticStyle.gentle
-    @AppStorage("reminderHaptics") private var reminderHaptics = HapticStyle.strong
+   
     
     var body: some View {
         NavigationStack {
-            List {
-                ///Device info section
-                Section("Device") {
-                    Text("Device ID: \(useDeviceID ?? "Unknown")")
-                        .font(.system(.subheadline, design: .monospaced))
-                }
-                
-                ///Notifications Section
-                Section {
-                    Toggle("Enable Reminders", isOn: $notificationsEnabled)
-                    
-                    ///Timer Haptics
-                    Picker("Timer Complete", selection: $timerHaptics) {
-                        ForEach(HapticStyle.allCases) { style in
-                            Text(style.description).tag(style)
-                        }
-                    }
-                    
-                    ///Reminder Haptics
-                    Picker("Reminder Style", selection: $reminderHaptics) {
-                        ForEach(HapticStyle.allCases) { style in
-                            Text(style.description).tag(style)
-                        }
-                    }
-                } header: {
-                    Text("Notifications")
-                } footer: {
-                    Text("Only haptic feedback, no sounds")
-                }
-                
-                ///App Info Section
-                Section("About") {
-                    HStack {
-                        Text("Version")
-                        Spacer()
-                        Text(Bundle.main.appVersion)
-                            .foregroundStyle(Color.theme.secondaryGreen)
-                    }
+            VStack {
+                Text("Will Be Here")
                 }
             }
             .navigationTitle("Settings")
         }
     }
-}
 
 extension Bundle {
     var appVersion: String {

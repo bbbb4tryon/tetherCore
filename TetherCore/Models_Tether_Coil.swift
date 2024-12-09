@@ -1,5 +1,5 @@
 //
-//  ModelsTether_Coil.swift
+//  Models_Tether_Coil.swift
 //  TetherCore
 //
 //  Created by Benjamin Tryon on 12/4/24.
@@ -42,6 +42,4 @@ struct Coil: Identifiable, Codable {
         return formatter.string(from: timeStamp)
     }
 }
-
-///[Model:
 

@@ -10,17 +10,26 @@ import Foundation
 
 
 struct CoreView: View {
-    @StateObject private var coreVM = CoreViewModel() /// Handles storage-related errors in the core view model
-    /// - Note: Conforms to Error, GlobalError, and LocalizedError protocols
+    //    @StateObject private var coreVM = CoreViewModel() /// Handles storage-related errors in the core view model
+    /// - Note: Conforms to Error, GlobalError, and LocalizedError protocols; IS for normal use
+    @StateObject private var coreVM = CoreViewModel(testing: true)
+    /// - Note: For testing - comment out or in
     @FocusState private var field: Bool
     @State public var buttonWasPressed = false  //Making a Declaration/State + public, for testing
     let show: Bool = false
     
     var body: some View {
-        VStack {
+        NavigationStack {
+        VStack(spacing: 20){
             header
-            show.seeInputs = true
+            input
+            ///Show first tether, if it is entered
+            if let tether = coreVM.temporaryTether {
+                DisplayUnderInput(tether: tether, onClear:  coreVM.clearTetherUponMistake)
+            }
             toSubmit_Button
+            ///Pushes content up ~ vertical centering
+            Spacer()
         }
         .padding()
         .alert(
@@ -37,10 +46,12 @@ struct CoreView: View {
                 type: modalType,
                 onComplete: { coreVM.handleModalAction(for: modalType, action: .complete) },
                 onInProgress: { coreVM.handleModalAction(for: modalType, action: .inProgress) },
-                onCancel: { coreVM.handleModalAction(for: modalType, action: .cancel) }
+                onCancel: { coreVM.handleModalAction(for: modalType, action: .cancel) },
+                coreVM: coreVM
             )
         }
     }
+}
     private var header: some View {
         get {
             Text("Pull yourself back to center")
@@ -54,31 +65,24 @@ struct CoreView: View {
         }
     }
     private var input: some View {
-        TextField(instructions, text: $coreVM.currentTetherText )
+        /// Input field with dynamic placeholder
+        TextField(
+            coreVM.temporaryTether == nil ? "Required" : "Enter One More",
+            text: $coreVM.currentTetherText
+        )
             .accessibilityIdentifier("Required")
             .textFieldStyle(.roundedBorder)
             .padding(.horizontal, 20)
             .frame(maxWidth: 300)
-            .shadow(color: Color.theme.primaryBlue.opacity(0.1), radius: 5)
             .focused($field)
+            .shadow(color: Color.theme.primaryBlue.opacity(0.1), radius: 5)
+            .submitLabel(.done)
             .onSubmit {
                 buttonWasPressed = true     //JUST the action, not the whole button view
                 coreVM.submitTether()
             }
     }
-    private var seeInputs: some View {
-        Text("\(See.required)")
-        
-        Text("\($See.oneMore)")
-            .strikethrough(coil.tether1.isCompleted)
-    }
-    private var instructions: some View {
-        if toSubmit_Button.buttonWasPressed {
-            TextField("Enter One More")
-        } else {
-            TextField("Required")
-        }
-    }
+
     private var toSubmit_Button: some View {
         Button(action: {
             buttonWasPressed = true     ///tied to @State, is 'public' for testing via `testButton()` in testing
@@ -99,11 +103,6 @@ struct CoreView: View {
         .opacity(coreVM.currentTetherText.isEmpty ? 0.6 : 1)
         .animation(.easeInOut, value: coreVM.currentTetherText.isEmpty)
     }
-}
-
-enum See {
-    case required
-    case oneMore
 }
 
 #Preview {

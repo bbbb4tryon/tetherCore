@@ -13,6 +13,7 @@ enum ModalType: Identifiable {
     case completion
     case breakPrompt
     case mindfulness
+    case social
     
     var id: String { String(describing: self) }
 }

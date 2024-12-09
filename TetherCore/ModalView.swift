@@ -12,25 +12,37 @@ struct ModalView: View {
     let onComplete: () -> Void
     let onInProgress: () -> Void
     let onCancel: () -> Void
-    private let storage = TetherStorageManager()        ///storage a regular property
-    private let coreVM = CoreViewModel()
+    @ObservedObject var coreVM: CoreViewModel            ///No = or (), it is not initialized here and don't want it to be
 //    @State private var tetherInsert: [Tether] = []
-    var tether: Tether
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
         VStack(spacing: 20) {
             Text(title)
                 .font(.headline)
-            List {
-                ForEach(tether.tetherText) { tether in
-                    Tether(tether: coreVM.newTether)
+            
+            ///Uses TetherRowView for display
+            if let coil = coreVM.currentCoil {
+                switch type {
+                case .tether1:
+                    TetherRowView(
+                        tether: coil.tether1,
+                        isCompleted: coil.tether1.isCompleted
+                    )
+                case .tether2:
+                    TetherRowView(
+                        tether: coil.tether2,
+                        isCompleted: coil.tether2.isCompleted
+                    )
+                default: EmptyView()
                 }
             }
-            .task {
-                let showThenAdd = await tether.init()
-                tInput = showThenAdd.tetherText
+            
+            ///Show Timer
+            if coreVM.showTimer {
+                TimerView(seconds: coreVM.timerSeconds)
             }
+
             HStack(spacing: 20) {
                 Button("Cancel") {
                     onCancel()
@@ -63,25 +75,7 @@ struct ModalView: View {
         case .completion: return "All Tasks Complete!"
         case .breakPrompt: return "Take a Break?"
         case .mindfulness: return "Mindfulness Check"
-        }
-    }
-}
-
-extension CoreViewModel {
-    func handleModalAction(for type: ModalType, action: ModalAction) {
-        switch (type, action) {
-        case (.tether1, .complete):
-            currentCoil?.tether1.isCompleted = true
-        case (.tether2, .complete):
-            currentCoil?.tether2.isCompleted = true
-        case (_, .inProgress):
-            // Handle in-progress state
-            break
-        case (_, .cancel):
-            // Reset or handle cancellation
-            break
-        default:
-            break
+        case .social: return "Send to Social"
         }
     }
 }
