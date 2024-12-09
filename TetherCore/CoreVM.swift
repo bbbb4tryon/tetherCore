@@ -125,22 +125,17 @@ class CoreViewModel: ObservableObject {
             resetAll()
             currentModal = nil
             
-        case (.breakPrompt, .complete):
+        case (.breakPrompt, .complete),
+            (.mindfulness, .complete),
+            (.breakPrompt, .inProgress),
+            (.mindfulness, .inProgress),
+            (.social, .inProgress),
+            (.completion, .inProgress):
             break
-        case (.mindfulness, .complete):
-            break
-        case (.breakPrompt, .inProgress):
-            break
-        case (.mindfulness, .inProgress):
-            break
-        case (.social, .inProgress):
-            break
-        case (.completion, .inProgress):
-            break
+            
         case (_, .cancel):
             currentModal = nil
         }
-
     }
         
         private func resetAndStartTimer() {
