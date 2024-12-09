@@ -32,6 +32,7 @@ struct CoreView: View {
             Spacer()
         }
         .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .alert(
             "Error",
             isPresented: Binding(

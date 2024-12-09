@@ -22,10 +22,13 @@ class CoreViewModel: ObservableObject {
     @Published var currentModal: ModalType?
     
     private let storage: TetherStorageManager
+    private let mainTimer: TimerActor   /// [Property][Actor][CoreVM][-> Timer]
+    
     init(testing: Bool = false,
          storage: TetherStorageManager = TetherStorageManager()
     ){
         self.storage = storage
+        self.mainTimer = TimerActor()   ///Initialize timer actor
         if testing {
             let tether1 = Tether(tetherText: "Walk the dog")
             let tether2 = Tether(tetherText: "Read a book")
@@ -55,36 +58,36 @@ class CoreViewModel: ObservableObject {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                     showTimer = true
                 }
-                startTimer()
-                //
+                Task { await startTimer() }
             }
         }
         currentTetherText = ""
     }
     
-    private func startTimer() {
-        ///Timer countdown
-        let timer = Timer.publish(every: 1.0, on: .main, in: .common)
-               .autoconnect()
-               .sink { [weak self] _ in
-                   guard let self = self else { return }
-                   
-                   Task {  // Task to handle sendable closure
-                       if self.timerSeconds > 0 {
-                           self.timerSeconds -= 1
-                       } else {
-                           await self.invalidateTimer()
-                           self.onTimerComplete()
-                       }
-                   }
-               }
+    // MARK: Timer Management
+    /// "Timer Management"
+    private func startTimer() async {   /// [Function][Timer][CoreVM][-> Void]
+        await mainTimer.start { @MainActor in
+            self.timerSeconds -= 1
+            if self.timerSeconds == 0 {
+                self.onTimerComplete()
+            }
+        }
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            showTimer = true
+        }
     }
     
-    private func invalidateTimer() async {
-        Task {  // Task for async operation
-            // Stop timer logic
-            showTimer = false
+    private func resetAndStartTimer() { /// [Function][Timer][CoreVM][->Void]
+        timerSeconds = 1200
+        Task {
+            await startTimer()
         }
+    }
+    
+    private func pauseTimer() async {    /// [Function][Timer][CoreVM][-> Void]
+        await mainTimer.pause()
+        showTimer = false
     }
     
     func handleModalAction(for type: ModalType, action: ModalAction) {
