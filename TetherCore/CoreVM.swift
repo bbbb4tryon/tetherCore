@@ -137,7 +137,7 @@ class CoreViewModel: ObservableObject {
             currentModal = nil
         }
     }
-        
+        ///
         private func resetAndStartTimer() {
             timerSeconds = 1200
             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
