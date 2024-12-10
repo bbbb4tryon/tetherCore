@@ -5,10 +5,13 @@
 //  Created by Benjamin Tryon on 12/9/24.
 //
 
+import SwiftUI
 import Foundation
 ///Coordinator Pattern to improve modal flow
 class TetherCoordinator: ObservableObject {
     @Published var currentModal: ModalType?
+    @Published var showTimer: Bool = false
+    var showMessage: Bool = false
     
     enum NavigationPath {
         case home
@@ -22,16 +25,22 @@ class TetherCoordinator: ObservableObject {
     
     func navigate(to path: NavigationPath) {
         switch path {
-        case .tether1Modal:
-            currentModal = .tether1
-        case .tether2Modal:
-            currentModal = .tether2
-        case .completionModal:
-            currentModal = .completion
-        case .socialModal:
-            currentModal = .social
+        case .tether1Modal: currentModal = .tether1
+        case .tether2Modal: currentModal = .tether2
+        case .completionModal: currentModal = .completion
+        case .socialModal: currentModal = .social
         case .home, .profile, .settings:
             currentModal = nil
+        }
+    }
+    
+    func dismissModal() {
+        currentModal = nil
+    }
+    
+    func showTimer(_ show: Bool) {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            showTimer = show
         }
     }
     

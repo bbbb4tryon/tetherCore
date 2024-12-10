@@ -12,8 +12,8 @@ struct ModalView: View {
     let onComplete: () -> Void
     let onInProgress: () -> Void
     let onCancel: () -> Void
+    
     @ObservedObject var coreVM: CoreViewModel            ///No = or (), it is not initialized here and don't want it to be
-//    @State private var tetherInsert: [Tether] = []
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {

@@ -10,17 +10,21 @@ import Foundation
 
 
 struct CoreView: View {
-    //    @StateObject private var coreVM = CoreViewModel() /// Handles storage-related errors in the core view model
     /// - Note: Conforms to Error, GlobalError, and LocalizedError protocols; IS for normal use
     @StateObject private var coreVM = CoreViewModel()
-    /// - Note: For testing - comment out or in
-    @FocusState private var field: Bool
-    @State public var buttonWasPressed = false  //Making a Declaration/State + public, for testing
+    @StateObject private var coordinator: TetherCoordinator
+    @FocusState private var field: Bool         /// - Note: For testing - comment out or in
+    @State public var buttonWasPressed = false  /// Making a Declaration/State + public, for testing
     let show: Bool = false
     
+    // NOTE: - NECESSARY? 
+    init(coordinator: TetherCoordinator = TetherCoordinator()) {
+        _coordinator = StateObject(wrappedValue: coordinator)
+        _coreVM = StateObject(wrappedValue: CoreViewModel(coordinator: coordinator))
+    }
+    //MECESSARY?
+    
     var body: some View {
-        let ifTether1IsCompleted = coreVM.currentCoil?.tether1.isCompleted ?? false
-        let ifTether2IsCompleted = coreVM.currentCoil?.tether2.isCompleted ?? false
         NavigationStack {
             VStack(spacing: 20){
                 header
@@ -40,7 +44,9 @@ struct CoreView: View {
                 .padding(.horizontal)
                 
                 clearData_Button
-                submit_Button
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    submit_Button
+                }
                 ///Pushes content up ~ vertical centering
                 Spacer()
             }
@@ -55,12 +61,10 @@ struct CoreView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .sheet(item: $coreVM.currentModal) { modalType in
+        .sheet(item: $coordinator.currentModal) { modalType in
             ModalView(
                 type: modalType,
-                onComplete: { coreVM.handleModalAction(for: modalType, action: .complete) },
-                onInProgress: { coreVM.handleModalAction(for: modalType, action: .inProgress) },
-                onCancel: { coreVM.handleModalAction(for: modalType, action: .cancel) },
+                coordinator: coordinator,
                 coreVM: coreVM
             )
         }

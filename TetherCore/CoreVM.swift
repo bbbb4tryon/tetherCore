@@ -21,23 +21,30 @@ class CoreViewModel: ObservableObject {
         case completed(Coil)        /// Coil with completion status
     }
     @Published private(set) var currentState: TetherState = .empty
+    @Published private(set) var timerSeconds: Int = 1200     /// 20 minutes
     @Published var currentTetherText: String = ""
-    @Published var currentModal: ModalType?
-    
+    @Published var showTimer: Bool = false
     @Published private(set) var error: GlobalError?
-    @Published var timerSeconds: Int = 1200     /// 20 minutes
+    
+    private let mainTimer: TimerActor
+    private let coordinator: TetherCoordinator  /// [Property][Actor][CoreVM][-> Timer]
+    private let storage: TetherStorageManager
+    
+    
+    ///DELETE NOW?
+//    @Published var currentModal: ModalType?
+    
 //    testing: Bool = false; @Published var isTesting: Bool = false;  self.isTesting = testing  /// Track testing state; if testing {
 //        setupTestData()
 //    }
     
-    private let storage: TetherStorageManager
-    private let mainTimer: TimerActor   /// [Property][Actor][CoreVM][-> Timer]
-    
     init(
+        coordinator: TetherCoordinator = TetherCoordinator(),
          storage: TetherStorageManager = TetherStorageManager()
     ){
-        self.storage = storage
         self.mainTimer = TimerActor()   ///Initialize timer actor
+        self.storage = storage          /// Initialize storage
+        self.coordinator = coordinator  /// Initialize coordinator
     }
     
     //MARK: Computed Properties
@@ -61,8 +68,7 @@ class CoreViewModel: ObservableObject {
     //        currentCoil?.tether2.isCompleted == true  ///Optional chaining could be nil
     //    }
     
-    
-    
+
     //MARK: Actions
     /// Flow of tethers/input
     func submitTether() {
@@ -72,15 +78,17 @@ class CoreViewModel: ObservableObject {
         switch currentState {
         case .empty:
             currentState = .firstTether(newTether)
+            
         case .firstTether(let firstTether):
             let coil = Coil(tether1: firstTether, tether2: newTether)
             currentState = .secondTether(coil)
             Task {
                 try? await storage.saveCoil(coil)
                 await startTimer()
-                currentModal = .tether1
+                coordinator.navigate(to: .tether1Modal)
             }
-        default:
+        /// Already have both tethers, ignore additional submissions
+        case .secondTether, .completed:
             break
         }
         currentTetherText = ""
@@ -99,33 +107,44 @@ class CoreViewModel: ObservableObject {
             }
         }
         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-            showTimer = true
+           showTimer = true
         }
     }
     
     private func resetAndStartTimer() { /// [Function][Timer][CoreVM][->Void]
         timerSeconds = 1200
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-            showTimer = true
+        Task {
+                await startTimer()
+                coordinator.showTimer(true)
+            }
         }
-        Task { await startTimer() }
-    }
     
     private func pauseTimer() async {    /// [Function][Timer][CoreVM][-> Void]
         await mainTimer.pause()
         showTimer = false
     }
         /// When Timer is Complete!
-        func onTimerComplete() {
-            if let coil = currentCoil {
-                if !coil.tether1.isCompleted {
-                    currentModal = .tether1
-                } else if !coil.tether2.isCompleted {
-                    currentModal = .tether2
-                }
+    func onTimerComplete() {
+        switch currentState {
+        case .secondTether(let coil):
+            if !coil.tether1.isCompleted {
+                coordinator.navigate(to: .tether1Modal)
+            } else if !coil.tether2.isCompleted {
+                coordinator.navigate(to: .tether2Modal)
             }
+        default:
+            break
         }
-        
+    }
+       
+    ///BEFORE:
+    ///     if let coil = currentCoil {
+    /* if !coil.tether1.isCompleted {
+        currentModal = .tether1
+    } else if !coil.tether2.isCompleted {
+        currentModal = .tether2
+    }
+     */
         ///[Function][Clear][CoreVM][-> Void]
         func clearTetherUponMistake() {
             temporaryTether = nil
@@ -175,7 +194,7 @@ class CoreViewModel: ObservableObject {
     func handleModalAction(for type: ModalType, action: ModalAction) {
         switch (type, action) {
         case (.tether1, .complete):
-            currentCoil?.tether1.isCompleted = true
+            coil.tether1.isCompleted = true
             currentModal = .tether2
             
         case (.tether1, .inProgress):
