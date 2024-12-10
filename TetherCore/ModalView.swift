@@ -22,48 +22,28 @@ struct ModalView: View {
                 .font(.headline)
             
             ///Uses TetherRowView for display
-            if let coil = coreVM.currentCoil {
+            if case .secondTether(let coil) = coreVM.currentState {
                 switch type {
                 case .tether1:
                     TetherRowView(
                         tether: coil.tether1,
-                        isCompleted: coil.tether1.isCompleted
+                        isCompleted: coreVM.isTether1Completed
                     )
                 case .tether2:
                     TetherRowView(
                         tether: coil.tether2,
-                        isCompleted: coil.tether2.isCompleted
+                        isCompleted: coreVM.isTether2Completed
                     )
                 default: EmptyView()
                 }
             }
             
             ///Show Timer
-            if coreVM.showTimer {
+            if coordinator.showTimer {
                 TimerView(seconds: coreVM.timerSeconds)
             }
-
-            HStack(spacing: 20) {
-                Button("Cancel") {
-                    onCancel()
-                    dismiss()
-                }
-                .buttonStyle(.bordered)
-                
-                Button("In Progress") {
-                    onInProgress()
-                    dismiss()
-                }
-                .buttonStyle(.bordered)
-                .foregroundColor(Color.theme.secondaryGreen)
-                
-                Button("Done") {
-                    onComplete()
-                    dismiss()
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(Color.theme.primaryBlue)
-            }
+            
+            action_Buttons
         }
         .padding()
     }
@@ -76,6 +56,30 @@ struct ModalView: View {
         case .breakPrompt: return "Take a Break?"
         case .mindfulness: return "Mindfulness Check"
         case .social: return "Send to Social"
+        }
+    }
+    
+    private var action_Buttons: some View {
+        HStack(spacing: 20) {
+            Button("Cancel") {
+                onCancel()
+                dismiss()
+            }
+            .buttonStyle(.bordered)
+            
+            Button("In Progress") {
+                onInProgress()
+                dismiss()
+            }
+            .buttonStyle(.bordered)
+            .foregroundColor(Color.theme.secondaryGreen)
+            
+            Button("Done") {
+                onComplete()
+                dismiss()
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Color.theme.primaryBlue)
         }
     }
 }
