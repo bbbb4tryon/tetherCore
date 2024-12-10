@@ -17,7 +17,7 @@ struct CoreView: View {
     @State public var buttonWasPressed = false  /// Making a Declaration/State + public, for testing
     let show: Bool = false
     
-    // NOTE: - NECESSARY? 
+    // NOTE: - NECESSARY?
     init(coordinator: TetherCoordinator = TetherCoordinator()) {
         _coordinator = StateObject(wrappedValue: coordinator)
         _coreVM = StateObject(wrappedValue: CoreViewModel(coordinator: coordinator))
@@ -33,20 +33,21 @@ struct CoreView: View {
                     input
                     
                     ///Show and display first tether, second tether
-                    if let tether1 = coreVM.temporaryTether {
-                        TetherRowView(tether: tether1, isCompleted: coreVM.isTether1Completed)
-                    }
-                    
-                    if let coil = coreVM.currentCoil {
+                    switch coreVM.currentState {
+                    case .firstTether(let tether):
+                        TetherRowView(tether: tether, isCompleted: false)
+                    case .secondTether(let coil):
+                        TetherRowView(tether: coil.tether1, isCompleted: coreVM.isTether1Completed)
                         TetherRowView(tether: coil.tether2, isCompleted: coreVM.isTether2Completed)
+                    case .empty:
+                        EmptyView()
                     }
                 }
                 .padding(.horizontal)
                 
                 clearData_Button
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    submit_Button
-                }
+                submit_Button
+                
                 ///Pushes content up ~ vertical centering
                 Spacer()
             }
