@@ -95,7 +95,7 @@ struct CoreView: View {
     private var input: some View {
         /// Input field with dynamic placeholder
         TextField(
-            coreVM.temporaryTether == nil ? "Required" : "Enter One More",
+            coreVM.currentState == .empty ? "Required" : "Enter One More",
             text: $coreVM.currentTetherText
         )
             .accessibilityIdentifier("Required")
