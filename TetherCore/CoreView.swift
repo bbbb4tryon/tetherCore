@@ -39,47 +39,48 @@ struct CoreView: View {
                     case .secondTether(let coil):
                         TetherRowView(tether: coil.tether1, isCompleted: coreVM.isTether1Completed)
                         TetherRowView(tether: coil.tether2, isCompleted: coreVM.isTether2Completed)
+                    case .completed(_):
+                        EmptyView()
                     case .empty:
                         EmptyView()
                     }
+                    
+                    
+                    clearData_Button
+                    submit_Button
+                    
+                    ///Pushes content up ~ vertical centering
+                    Spacer()
                 }
-                .padding(.horizontal)
-                
-                clearData_Button
-                submit_Button
-                
-                ///Pushes content up ~ vertical centering
-                Spacer()
-            }
-            .navigationBarBackButtonHidden(true)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button(action: { }) {
-                        Image(systemName: "chevron.left")
-                            .imageScale(.large)
+                .navigationBarBackButtonHidden(true)
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button(action: { coordinator.navigate(to: .home) }) {
+                            Image(systemName: "chevron.left")
+                                .imageScale(.large)
+                        }
                     }
                 }
             }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .sheet(item: $coordinator.currentModal) { modalType in
-            ModalView(
-                type: modalType,
-                coordinator: coordinator,
-                coreVM: coreVM
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .sheet(item: $coordinator.currentModal) { modalType in
+                ModalView(
+                    type: modalType,
+                    coordinator: coordinator,
+                    coreVM: coreVM
+                )
+            }
+            .alert(
+                "Error",
+                isPresented: Binding(
+                    get: {  coreVM.error != nil },
+                    set: { if !$0 { coreVM.clearError() }}
+                ),
+                actions: { Button("OK") { coreVM.clearError() }},
+                message: { Text(coreVM.error?.message ?? "" )}
             )
         }
-        .alert(
-            "Error",
-            isPresented: Binding(
-                get: {  coreVM.error != nil },
-                set: { if !$0 { coreVM.clearError() }}
-            ),
-            actions: { Button("OK") { coreVM.clearError() }},
-            message: { Text(coreVM.error?.message ?? "" )}
-        )
     }
-
     private var header: some View {
         get {
             Text("Pull yourself back to center")

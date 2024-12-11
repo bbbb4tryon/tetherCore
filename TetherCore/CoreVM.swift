@@ -19,6 +19,8 @@ class CoreViewModel: ObservableObject {
         case firstTether(Tether)    /// First Tether entered
         case secondTether(Coil)     /// Both tethers in coil, not completed
         case completed(Coil)        /// Coil with completion status
+        
+        
     }
     @Published private(set) var currentState: TetherState = .empty
     @Published private(set) var timerSeconds: Int = 1200     /// 20 minutes
@@ -136,6 +138,16 @@ class CoreViewModel: ObservableObject {
             break
         }
     }
+    /// State and UI
+    func resetAll() {
+        ///Use TimerActor to stop timer completely
+        Task {
+            await mainTimer.stop()
+            currentState = .empty
+            coordinator.reset()     ///Modal/UI reset
+            ///
+        }
+    }
        
     ///BEFORE:
     ///     if let coil = currentCoil {
@@ -145,12 +157,8 @@ class CoreViewModel: ObservableObject {
         currentModal = .tether2
     }
      */
-        ///[Function][Clear][CoreVM][-> Void]
-        func clearTetherUponMistake() {
-            temporaryTether = nil
-            currentTetherText = ""
-        }
-        
+    
+    // MARK: - Error Management
         /// Manage error state
         func clearError() {
             self.error = nil
@@ -171,59 +179,67 @@ class CoreViewModel: ObservableObject {
             guard !currentTetherText.isEmpty else { return }
             
         }
-    /// State and UI
-    func resetAll() {
-        ///Use TimerActor to stop timer completely
-        Task {
-            await mainTimer.stop()
-            currentState = .empty
-            currentModal = nil
-        }
-    }
-    
-//    ///Testing Data Management
-//    private func setupTestData() {
-//        let tether1 = Tether(tetherText: "Walk the dog")
-//        let tether2 = Tether(tetherText: "Read a book")
-//        self.currentCoil = Coil(tether1: tether1, tether2: tether2)
-//        self.showTimer = true
-//        self.currentModal = .tether1
-//    }
     
     //MARK: Modal Actions Management
     func handleModalAction(for type: ModalType, action: ModalAction) {
         switch (type, action) {
         case (.tether1, .complete):
-            coil.tether1.isCompleted = true
-            currentModal = .tether2
-            
-        case (.tether1, .inProgress):
-            currentModal = nil
-            Task { await pauseTimer() }
-            resetAndStartTimer()
+            if case .secondTether(var coil) = currentState {
+                coil.tether1.isCompleted = true
+                currentState = .secondTether(coil)
+                coordinator.navigate(to: .tether2Modal)
+            }
             
         case (.tether2, .complete):
-            currentCoil?.tether2.isCompleted = true
-            currentModal = .completion
-            
-        case (.tether2, .inProgress):
-            currentModal = nil
-            Task { await pauseTimer() }
-            resetAndStartTimer()
-            
+            if case .secondTether(var coil) = currentState {
+//                guard let !coordinator.navigate(to: .tether1Modal) else { return }
+                coil.tether2.isCompleted = true
+                currentState = .completed(coil)
+                coordinator.navigate(to: .completionModal)
+            }
+ 
         case (.completion, .complete):
-            // Handle social sharing
-            currentModal = .social
-            
-        case (.completion, .cancel):
-            // Go back to home
-            resetAll()
+            /// Social sharing flow
+            if case .completed(let coil) = currentState {
+                Task {
+                    try? await storage.moveCoilToCompleted(coil)
+                    coordinator.navigate(to: .socialModal)
+                }
+            }
             
         case (.social, .complete):
-            // Handle social post completion
-            resetAll()
-            currentModal = nil
+            /// Finish flow; Handle social post completion
+            Task {
+                await mainTimer.stop()
+                currentState = .empty
+                coordinator.navigate(to: .home)
+            }
             
+            /// In Progress
+        case (.tether1, .inProgress):
+            Task {
+                await pauseTimer()
+                resetAndStartTimer()
+            }
+            coordinator.dismissModal()
+            
+        case (.tether2, .inProgress):
+            Task {
+                await pauseTimer()
+                resetAndStartTimer()
+            }
+            coordinator.dismissModal()
+            
+            /// Cancel
+        case (.completion, .cancel):
+            /// Skip Social, go home
+            if case .completed(let coil) = currentState {
+                Task {
+                    try? await storage.moveCoilToCompleted(coil)
+                    resetAll()
+                }
+            }
+ 
         case (.breakPrompt, .complete),
             (.mindfulness, .complete),
             (.breakPrompt, .inProgress),
@@ -233,9 +249,18 @@ class CoreViewModel: ObservableObject {
             break
             
         case (_, .cancel):
-            currentModal = nil
+            coordinator.dismissModal()
         }
     }
         
 }
 
+
+//    ///Testing Data Management
+//    private func setupTestData() {
+//        let tether1 = Tether(tetherText: "Walk the dog")
+//        let tether2 = Tether(tetherText: "Read a book")
+//        self.currentCoil = Coil(tether1: tether1, tether2: tether2)
+//        self.showTimer = true
+//        self.currentModal = .tether1
+//    }

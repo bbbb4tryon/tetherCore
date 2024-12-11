@@ -9,9 +9,6 @@ import SwiftUI
 
 struct ModalView: View {
     let type: ModalType
-    let onComplete: () -> Void
-    let onInProgress: () -> Void
-    let onCancel: () -> Void
     @ObservedObject var coordinator: TetherCoordinator      // No = or (), it is not initialized here and don't want it to be
     @ObservedObject var coreVM: CoreViewModel               // No = or (), it is not initialized here and don't want it to be
     @Environment(\.dismiss) private var dismiss
@@ -62,24 +59,23 @@ struct ModalView: View {
     private var action_Buttons: some View {
         HStack(spacing: 20) {
             Button("Cancel") {
-                onCancel()
+                coordinator.navigate(to: .home)
                 dismiss()
             }
             .buttonStyle(.bordered)
             
             Button("In Progress") {
-                onInProgress()
+                coreVM.handleModalAction(for: type, action: .inProgress)
                 dismiss()
             }
             .buttonStyle(.bordered)
             .foregroundColor(Color.theme.secondaryGreen)
             
             Button("Done") {
-                onComplete()
+                coreVM.handleModalAction(for: type, action: .complete)
                 dismiss()
             }
             .buttonStyle(.borderedProminent)
-            .tint(Color.theme.primaryBlue)
         }
     }
 }

@@ -11,7 +11,6 @@ import Foundation
 class TetherCoordinator: ObservableObject {
     @Published var currentModal: ModalType?
     @Published var showTimer: Bool = false
-    var showMessage: Bool = false
     
     enum NavigationPath {
         case home
@@ -23,14 +22,20 @@ class TetherCoordinator: ObservableObject {
         case socialModal
     }
     
+    func reset() {
+        currentModal = nil
+        showTimer = false
+    }
+    
     func navigate(to path: NavigationPath) {
         switch path {
+        case .home: currentModal = nil
+        case .profile: currentModal = nil
+        case .settings: currentModal = nil
         case .tether1Modal: currentModal = .tether1
         case .tether2Modal: currentModal = .tether2
         case .completionModal: currentModal = .completion
         case .socialModal: currentModal = .social
-        case .home, .profile, .settings:
-            currentModal = nil
         }
     }
     
