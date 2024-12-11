@@ -45,7 +45,6 @@ struct CoreView: View {
                         EmptyView()
                     }
                     
-                    
                     clearData_Button
                     submit_Button
                     

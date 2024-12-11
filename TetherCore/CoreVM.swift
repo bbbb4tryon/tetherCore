@@ -149,6 +149,8 @@ class CoreViewModel: ObservableObject {
     }
         /// When Timer is Complete!
     func onTimerComplete() {
+        /// Haptics notify user
+        HapticStyle.medium.trigger()
         switch currentState {
         case .secondTether(let coil):
             if !coil.tether1.isCompleted {
