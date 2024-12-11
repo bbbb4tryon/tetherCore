@@ -8,7 +8,7 @@
 import SwiftUI
 
 /// [Model: 'ModelTether' ][Conformance: Identifiable, Codable]['Storage' Data Type][-> Tether]
-struct Tether: Identifiable, Codable {
+struct Tether: Identifiable, Codable, Equatable {
     let id: UUID
     var tetherText: String
     var isCompleted: Bool
@@ -22,7 +22,7 @@ struct Tether: Identifiable, Codable {
 }
 
 ///[Model: 'ModelCoil'][Conformance: Identifiable, Codable]['Storage' Data Type][-> Tether]
-struct Coil: Identifiable, Codable {
+struct Coil: Identifiable, Codable, Equatable {
     let id: UUID
     var tether1: Tether
     var tether2: Tether

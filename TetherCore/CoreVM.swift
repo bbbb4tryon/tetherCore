@@ -14,14 +14,36 @@ import SwiftUI
 @MainActor
 class CoreViewModel: ObservableObject {
     
-    enum TetherState {
+    enum TetherState: Equatable {
         case empty                  /// Nothing entered
         case firstTether(Tether)    /// First Tether entered
         case secondTether(Coil)     /// Both tethers in coil, not completed
         case completed(Coil)        /// Coil with completion status
         
-        
+        ///Helper computed properties
+        var hasFirstTether: Bool {
+            switch self {
+            case .empty: return false
+            default: return true
+            }
+        }
+        var currentCoil: Coil? {
+            switch self {
+            case .secondTether(let coil), .completed(let coil):
+                return coil
+            default: return nil
+            }
+        }
+        ///Input placeholder texts
+        var inputPlaceholder: String {
+            switch self {
+            case .empty: return "Required"
+            case .firstTether: return "Enter One More"
+            default: return ""
+            }
+        }
     }
+    
     @Published private(set) var currentState: TetherState = .empty
     @Published private(set) var timerSeconds: Int = 1200     /// 20 minutes
     @Published var currentTetherText: String = ""
