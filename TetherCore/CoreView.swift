@@ -15,6 +15,8 @@ struct CoreView: View {
     @StateObject private var coordinator: TetherCoordinator
     @FocusState private var field: Bool         /// - Note: For testing - comment out or in
     @State public var buttonWasPressed = false  /// Making a Declaration/State + public, for testing
+    @State public var showProgress = false
+    
     let show: Bool = false
     
     // NOTE: - NECESSARY?
@@ -22,7 +24,7 @@ struct CoreView: View {
         _coordinator = StateObject(wrappedValue: coordinator)
         _coreVM = StateObject(wrappedValue: CoreViewModel(coordinator: coordinator))
     }
-    //MECESSARY?
+    //NECESSARY?
     
     var body: some View {
         NavigationStack {
@@ -31,14 +33,15 @@ struct CoreView: View {
                 
                 VStack(alignment: .leading,spacing: 16){
                     input
+                    progress
                     
                     ///Show and display first tether, second tether
                     switch coreVM.currentState {
                     case .firstTether(let tether):
-                        TetherRowView(tether: tether, isCompleted: false)
+                        TetherRowView(coordinator: coordinator, tether: tether, isCompleted: false)
                     case .secondTether(let coil):
-                        TetherRowView(tether: coil.tether1, isCompleted: coreVM.isTether1Completed)
-                        TetherRowView(tether: coil.tether2, isCompleted: coreVM.isTether2Completed)
+                        TetherRowView(coordinator: coordinator, tether: coil.tether1, isCompleted: coreVM.isTether1Completed)
+                        TetherRowView(coordinator: coordinator, tether: coil.tether2, isCompleted: coreVM.isTether2Completed)
                     case .completed(_):
                         EmptyView()
                     case .empty:
@@ -47,6 +50,7 @@ struct CoreView: View {
                     
                     clearData_Button
                     submit_Button
+                    
                     
                     ///Pushes content up ~ vertical centering
                     Spacer()
@@ -110,6 +114,12 @@ struct CoreView: View {
                 coreVM.submitTether()
             }
     }
+    
+    private var progress: some View {
+        Group {
+            if showProgress { ProgressDecrement(duration: 20*60, label: "Tethered") }
+        }
+    }
 
     private var clearData_Button: some View {
         Button(action: {
@@ -154,7 +164,8 @@ struct CoreView: View {
 }
 
 #Preview {
-    CoreView()
+    CoreView(coordinator: TetherCoordinator())
+        .environmentObject(TetherCoordinator())
 }
 //func validate(){
 //    guard !coreVM.currentTetherText.isEmpty else { return }

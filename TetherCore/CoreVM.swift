@@ -44,6 +44,7 @@ class CoreViewModel: ObservableObject {
         }
     }
     
+    @Published public var showProgress = false
     @Published private(set) var currentState: TetherState = .empty
     @Published private(set) var timerSeconds: Int = 1200     /// 20 minutes
     @Published var currentTetherText: String = ""
@@ -132,9 +133,9 @@ class CoreViewModel: ObservableObject {
         }
         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
            showTimer = true
+            showProgress = true
         }
     }
-    
     private func resetAndStartTimer() { /// [Function][Timer][CoreVM][->Void]
         timerSeconds = 1200
         Task {
@@ -142,12 +143,11 @@ class CoreViewModel: ObservableObject {
                 coordinator.showTimer(true)
             }
         }
-    
     private func pauseTimer() async {    /// [Function][Timer][CoreVM][-> Void]
         await mainTimer.pause()
         showTimer = false
     }
-        /// When Timer is Complete!
+    /// When Timer is Complete!
     func onTimerComplete() {
         /// Haptics notify user
         HapticStyle.medium.trigger()
@@ -216,9 +216,10 @@ class CoreViewModel: ObservableObject {
             
         case (.tether2, .complete):
             if case .secondTether(var coil) = currentState {
-//                guard let !coordinator.navigate(to: .tether1Modal) else { return }
+//          guard let !coordinator.navigate(to: .tether1Modal) else { return }
                 coil.tether2.isCompleted = true
                 currentState = .completed(coil)
+                showProgress = true
                 coordinator.navigate(to: .completionModal)
             }
  

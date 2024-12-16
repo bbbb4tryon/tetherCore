@@ -11,6 +11,7 @@ import Foundation
 class TetherCoordinator: ObservableObject {
     @Published var currentModal: ModalType?
     @Published var showTimer: Bool = false
+    @Published var timerValue: Int = 1200
     
     enum NavigationPath {
         case home
