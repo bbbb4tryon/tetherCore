@@ -20,7 +20,7 @@ struct ColorTheme {
     
     // Semantic colors for specific use cases
     let tetherBackground = Color("primaryBlue").opacity(0.1)
-    let timerBackground = Color("secondaryGreen").opacity(0.1)
+    let outlineBackground = Color("secondaryGreen").opacity(0.1)
     let buttonBackground = Color("primaryBlue")
     let buttonText = Color("Background")
 }

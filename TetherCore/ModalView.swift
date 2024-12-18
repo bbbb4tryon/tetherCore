@@ -8,19 +8,20 @@
 import SwiftUI
 
 struct ModalView: View {
-    let type: ModalType
-    @ObservedObject var coordinator: TetherCoordinator      // No = or (), it is not initialized here and don't want it to be
+    @EnvironmentObject var coordinator: TetherCoordinator      // No = or (), it is not initialized here and don't want it to be
     @ObservedObject var coreVM: CoreViewModel               // No = or (), it is not initialized here and don't want it to be
     @Environment(\.dismiss) private var dismiss
     @State private var showShareSheet = true
+    let type: ModalType
+    let onAction: ((ModalAction) async throws -> Void)?        ///Pass async closures for actions
     
+    /// NECESSARY: handles ObservableObject properties
     init(
         type: ModalType,
-        coordinator: TetherCoordinator,
+//        coordinator: TetherCoordinator,
         coreVM: CoreViewModel
     ) {
         self.type = type
-        self.coordinator = coordinator
         self.coreVM = coreVM
     }
     
@@ -34,24 +35,18 @@ struct ModalView: View {
                 switch type {
                 case .tether1:
                     TetherRowView(
-                        coordinator: coordinator,
-                        tether: coil.tether1,
-                        isCompleted: coreVM.isTether1Completed
+                        coordinator: coordinator, tether: coil.tether1, onZero: coreVM.isTether1Completed
                     )
                 case .tether2:
                     TetherRowView(
                         coordinator: coordinator,
                         tether: coil.tether2,
-                        isCompleted: coreVM.isTether2Completed
+                        onZero: coreVM.isTether2Completed
                     )
                 default: EmptyView()
                 }
             }
             
-            ///Displays Timer
-            if coordinator.showTimer {
-                TimerView(seconds: coreVM.timerSeconds, showProgress: true)
-            }
             /// Displays different buttons for Social Modal
             if type == .social {
                 social_Buttons
@@ -74,7 +69,7 @@ struct ModalView: View {
         }
     }
     
-    private var social_Buttons: some View {
+    var social_Buttons: some View {
         VStack(spacing: 16) {
             if case .secondTether(let coil) = coreVM.currentState {
                 Button("Share Achievement") {
@@ -89,28 +84,53 @@ struct ModalView: View {
         }
     }
     
-    private var action_Buttons: some View {
+    var action_Buttons: some View {
         HStack(spacing: 20) {
             Button("Cancel") {
-                coordinator.navigate(to: .home)
+                Task { @MainActor in
+                await coordinator.navigate(to: .home)
                 dismiss()
+                }
             }
             .buttonStyle(.bordered)
             
             Button("In Progress") {
-                coreVM.handleModalAction(for: type, action: .inProgress)
-                dismiss()
+                Task {
+                    try await coreVM.handleModalAction(for: type, action: .inProgress)
+                    dismiss()
+                }
             }
             .buttonStyle(.bordered)
             .background(Color.theme.secondaryGreen)
             
             Button("Done") {
-                coreVM.handleModalAction(for: type, action: .complete)
-                dismiss()
+                Task {
+                    try await coreVM.handleModalAction(for: type, action: .complete)
+                    dismiss()
+                }
             }
             .buttonStyle(.borderedProminent)
         }
     }
+    
+    var homePage_Buttons: some View {
+        HStack {
+            Button("Start") {
+                Task {
+                    try? await onAction?(.inProgress)
+                }
+            }
+            Button("Done") {
+                Task {
+                    try? await onAction?(.complete)
+                    await MainActor.run {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+    
 }
 
 enum ModalAction {

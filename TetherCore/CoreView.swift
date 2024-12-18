@@ -9,23 +9,20 @@ import SwiftUI
 import Foundation
 
 
-struct CoreView: View {
-    /// - Note: Conforms to Error, GlobalError, and LocalizedError protocols; IS for normal use
-    @StateObject private var coreVM = CoreViewModel()
-    @StateObject private var coordinator: TetherCoordinator
-    @FocusState private var field: Bool         /// - Note: For testing - comment out or in
-    @State public var buttonWasPressed = false  /// Making a Declaration/State + public, for testing
+struct CoreView: View {                             /// - Note: Conforms to Error, GlobalError, and LocalizedError protocols; IS for normal use
+    @EnvironmentObject private var coordinator: TetherCoordinator
+    @StateObject private var coreVM = CoreViewModel(coordinator: TetherCoordinator())
+    @FocusState private var field: Bool             /// - Note: For testing - comment out or in
+    @State public var buttonWasPressed = false      /// Making a Declaration/State + public, for testing
     @State public var showProgress = false
+    @State var progress: TimePieceView
     
-    let show: Bool = false
+    let showTimer: Bool = false
+    let countdown: any StandardizedTime
     
-    // NOTE: - NECESSARY?
-    init(coordinator: TetherCoordinator = TetherCoordinator()) {
-        _coordinator = StateObject(wrappedValue: coordinator)
-        _coreVM = StateObject(wrappedValue: CoreViewModel(coordinator: coordinator))
+    init(countdownType: CountdownTypes = .production){
+        self.countdown = countdownType.countdown
     }
-    //NECESSARY?
-    
     var body: some View {
         NavigationStack {
             VStack(spacing: 20){
@@ -33,15 +30,15 @@ struct CoreView: View {
                 
                 VStack(alignment: .leading,spacing: 16){
                     input
-                    progress
+                    progressDisplay
                     
                     ///Show and display first tether, second tether
                     switch coreVM.currentState {
                     case .firstTether(let tether):
-                        TetherRowView(coordinator: coordinator, tether: tether, isCompleted: false)
+                        TetherRowView(coordinator: coordinator, tether: tether, onZero: false)
                     case .secondTether(let coil):
-                        TetherRowView(coordinator: coordinator, tether: coil.tether1, isCompleted: coreVM.isTether1Completed)
-                        TetherRowView(coordinator: coordinator, tether: coil.tether2, isCompleted: coreVM.isTether2Completed)
+                        TetherRowView(coordinator: coordinator, tether: coil.tether1, onZero: coreVM.isTether1Completed)
+                        TetherRowView(coordinator: coordinator, tether: coil.tether2, onZero: coreVM.isTether2Completed)
                     case .completed(_):
                         EmptyView()
                     case .empty:
@@ -69,9 +66,15 @@ struct CoreView: View {
             .sheet(item: $coordinator.currentModal) { modalType in
                 ModalView(
                     type: modalType,
-                    coordinator: coordinator,
-                    coreVM: coreVM
+                    coreVM: coreVM,
+                    onAction: { action in
+                        await handleModalPresentation(modalType)
+                    }
                 )
+                .environmentObject(coordinator)
+                    .task { /// Handles async on appear
+                        await handleModalPresentation(modalType)
+                    }
             }
             .alert(
                 "Error",
@@ -111,20 +114,31 @@ struct CoreView: View {
             .submitLabel(.done)
             .onSubmit {
                 buttonWasPressed = true     //JUST the action, not the whole button view
-                coreVM.submitTether()
+                Task {
+                    try? await coreVM.submitTether()
+                }
             }
     }
     
-    private var progress: some View {
+    private var progressDisplay: some View {
         Group {
-            if showProgress { ProgressDecrement(duration: 20*60, label: "Tethered") }
+            if showTimer {
+                TimePieceView(
+                    seconds: coreVM.countDownAmt,
+                    showProgress: true,
+                    label: "Tethered",
+                    onZero: nil
+                )
+            }
         }
     }
 
     private var clearData_Button: some View {
         Button(action: {
             buttonWasPressed = true
-            coreVM.resetAll()
+            Task {
+                await coreVM.resetState()
+            }
         }) {
             Text("Clear Data")
                 .fontWeight(.semibold)
@@ -144,7 +158,9 @@ struct CoreView: View {
     private var submit_Button: some View {
         Button(action: {
             buttonWasPressed = true     ///tied to @State, is 'public' for testing via `testButton()` in testing
-            coreVM.submitTether()       ///this calls submit
+            Task {
+                try? await coreVM.submitTether()       ///this calls submit
+            }
         }){
             Text("Done")
                 .fontWeight(.semibold)
@@ -161,11 +177,21 @@ struct CoreView: View {
         .opacity(coreVM.currentTetherText.isEmpty ? 0.6 : 1)
         .animation(.easeInOut, value: coreVM.currentTetherText.isEmpty)
     }
+    
+    @MainActor
+    private func handleModalPresentation(_ type: ModalType) async {
+        switch type {
+        case .tether1: await standardizedTime.start()
+        case .completion: await coordinator.showTimer(true)
+        default: break
+        }
+    }
 }
 
 #Preview {
-    CoreView(coordinator: TetherCoordinator())
+    CoreView()
         .environmentObject(TetherCoordinator())
+        .environment(\.colorScheme, .light)
 }
 //func validate(){
 //    guard !coreVM.currentTetherText.isEmpty else { return }

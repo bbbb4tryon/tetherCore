@@ -8,11 +8,14 @@
 import SwiftUI
 import Foundation
 ///Coordinator Pattern to improve modal flow
+@MainActor ///Explicitly MainActor because UI updates
 class TetherCoordinator: ObservableObject {
     @Published var currentModal: ModalType?
-    @Published var showTimer: Bool = false
-    @Published var timerValue: Int = 1200
+    @Published var showClock: Bool = false
+    @Published var total20: Int = 1200
+    @Published var progress: Float = 0.0
     
+//    init(){} not necessary - all properties have default values
     enum NavigationPath {
         case home
         case profile
@@ -25,7 +28,7 @@ class TetherCoordinator: ObservableObject {
     
     func reset() {
         currentModal = nil
-        showTimer = false
+        showClock = false
     }
     
     func navigate(to path: NavigationPath) {
@@ -37,6 +40,7 @@ class TetherCoordinator: ObservableObject {
         case .tether2Modal: currentModal = .tether2
         case .completionModal: currentModal = .completion
         case .socialModal: currentModal = .social
+        default: break
         }
     }
     
@@ -46,7 +50,7 @@ class TetherCoordinator: ObservableObject {
     
     func showTimer(_ show: Bool) {
         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-            showTimer = show
+            showClock = show
         }
     }
     

@@ -37,7 +37,7 @@ struct Coil: Identifiable, Codable, Equatable {
     }
     var formattedTimestamp: String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "MM/dd HH:mm"
+        formatter.dateFormat = "MM/dd"
         formatter.timeZone = TimeZone.current   ///Handles both US and China
         return formatter.string(from: timeStamp)
     }

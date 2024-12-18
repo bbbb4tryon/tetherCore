@@ -44,16 +44,18 @@ class CoreViewModel: ObservableObject {
         }
     }
     
-    @Published public var showProgress = false
-    @Published private(set) var currentState: TetherState = .empty
-    @Published private(set) var timerSeconds: Int = 1200     /// 20 minutes
+    @EnvironmentObject var coordinator: TetherCoordinator
     @Published var currentTetherText: String = ""
-    @Published var showTimer: Bool = false
+    @Published private(set) var currentState: TetherState = .empty
+    @Published private(set) var progress: Float = 0.0
+    @Published private(set) var countDownAmt: Int = 1200     /// 20 minutes
+    @Published var showClock: Bool = false
     @Published private(set) var error: GlobalError?
-    
-    private let mainTimer: TimerActor
-    private let coordinator: TetherCoordinator  /// [Property][Actor][CoreVM][-> Timer]
+
     private let storage: TetherStorageManager
+    
+    private let mainTimer: CountdownActor
+    private let progressActor = ProgressActor()
     
     
     ///DELETE NOW?
@@ -63,13 +65,13 @@ class CoreViewModel: ObservableObject {
 //        setupTestData()
 //    }
     
+    /// Necessary - keeps initialization of actors and dependencies
     init(
-        coordinator: TetherCoordinator = TetherCoordinator(),
+        coordinator: TetherCoordinator,
          storage: TetherStorageManager = TetherStorageManager()
     ){
-        self.mainTimer = TimerActor()   ///Initialize timer actor
+        self.mainTimer = CountdownActor()   ///Initialize timer actor
         self.storage = storage          /// Initialize storage
-        self.coordinator = coordinator  /// Initialize coordinator
     }
     
     //MARK: Computed Properties
@@ -96,7 +98,7 @@ class CoreViewModel: ObservableObject {
 
     //MARK: Actions
     /// Flow of tethers/input
-    func submitTether() {
+    func submitTether() async throws {
         guard !currentTetherText.isEmpty else { return }
         let newTether = Tether(tetherText: currentTetherText)
         
@@ -107,72 +109,18 @@ class CoreViewModel: ObservableObject {
         case .firstTether(let firstTether):
             let coil = Coil(tether1: firstTether, tether2: newTether)
             currentState = .secondTether(coil)
-            Task {
-                try? await storage.saveCoil(coil)
-                await startTimer()
-                coordinator.navigate(to: .tether1Modal)
-            }
+            
+            try await storage.saveCoil(coil)
+            await mainTimer.start()
+            await coordinator.navigate(to: .tether1Modal)
         /// Already have both tethers, ignore additional submissions
         case .secondTether, .completed:
             break
         }
         currentTetherText = ""
     }
-
     
-    // MARK: Timer Management
-    /// "Timer Management"
-    private func startTimer() async {   /// [Function][Timer][CoreVM][-> Void]
-        await mainTimer.start {
-            Task {
-                self.timerSeconds -= 1
-                if self.timerSeconds == 0 {
-                    self.onTimerComplete()
-                }
-            }
-        }
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-           showTimer = true
-            showProgress = true
-        }
-    }
-    private func resetAndStartTimer() { /// [Function][Timer][CoreVM][->Void]
-        timerSeconds = 1200
-        Task {
-                await startTimer()
-                coordinator.showTimer(true)
-            }
-        }
-    private func pauseTimer() async {    /// [Function][Timer][CoreVM][-> Void]
-        await mainTimer.pause()
-        showTimer = false
-    }
-    /// When Timer is Complete!
-    func onTimerComplete() {
-        /// Haptics notify user
-        HapticStyle.medium.trigger()
-        switch currentState {
-        case .secondTether(let coil):
-            if !coil.tether1.isCompleted {
-                coordinator.navigate(to: .tether1Modal)
-            } else if !coil.tether2.isCompleted {
-                coordinator.navigate(to: .tether2Modal)
-            }
-        default:
-            break
-        }
-    }
-    /// State and UI
-    func resetAll() {
-        ///Use TimerActor to stop timer completely
-        Task {
-            await mainTimer.stop()
-            currentState = .empty
-            coordinator.reset()     ///Modal/UI reset
-            ///
-        }
-    }
-       
+/////////////////////////////////////// DELETE
     ///BEFORE:
     ///     if let coil = currentCoil {
     /* if !coil.tether1.isCompleted {
@@ -205,13 +153,13 @@ class CoreViewModel: ObservableObject {
         }
     
     //MARK: Modal Actions Management
-    func handleModalAction(for type: ModalType, action: ModalAction) {
+    func handleModalAction(for type: ModalType, action: ModalAction) async throws {
         switch (type, action) {
         case (.tether1, .complete):
             if case .secondTether(var coil) = currentState {
                 coil.tether1.isCompleted = true
                 currentState = .secondTether(coil)
-                coordinator.navigate(to: .tether2Modal)
+                await coordinator.navigate(to: .tether2Modal)
             }
             
         case (.tether2, .complete):
@@ -219,7 +167,7 @@ class CoreViewModel: ObservableObject {
 //          guard let !coordinator.navigate(to: .tether1Modal) else { return }
                 coil.tether2.isCompleted = true
                 currentState = .completed(coil)
-                showProgress = true
+                await progressActor.updateProgress(progress)       //Starts when tapped
                 coordinator.navigate(to: .completionModal)
             }
  
@@ -241,27 +189,21 @@ class CoreViewModel: ObservableObject {
             }
             
             /// In Progress
-        case (.tether1, .inProgress):
+        case (.tether1, .inProgress), (.tether2, .inProgress):
             Task {
-                await pauseTimer()
-                resetAndStartTimer()
+                await pause()
+                reset()
+                await progressActor.updateProgress(progress)
             }
             coordinator.dismissModal()
-            
-        case (.tether2, .inProgress):
-            Task {
-                await pauseTimer()
-                resetAndStartTimer()
-            }
-            coordinator.dismissModal()
-            
+
             /// Cancel
         case (.completion, .cancel):
             /// Skip Social, go home
             if case .completed(let coil) = currentState {
                 Task {
                     try? await storage.moveCoilToCompleted(coil)
-                    resetAll()
+                    reset()
                 }
             }
  
@@ -286,6 +228,6 @@ class CoreViewModel: ObservableObject {
 //        let tether1 = Tether(tetherText: "Walk the dog")
 //        let tether2 = Tether(tetherText: "Read a book")
 //        self.currentCoil = Coil(tether1: tether1, tether2: tether2)
-//        self.showTimer = true
+//        self.showClock = true
 //        self.currentModal = .tether1
 //    }
