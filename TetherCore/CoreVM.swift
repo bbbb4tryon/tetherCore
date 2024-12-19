@@ -54,8 +54,8 @@ class CoreViewModel: ObservableObject {
 
     private let storage: TetherStorageManager
     
-    private let mainTimer: CountdownActor
-    private let progressActor = ProgressActor()
+    private let baseClock: any StandardizedTime
+    private let timerCoordinator: TimerCoordinator
     
     
     ///DELETE NOW?
@@ -67,10 +67,11 @@ class CoreViewModel: ObservableObject {
     
     /// Necessary - keeps initialization of actors and dependencies
     init(
+        timerType: CountdownTypes = .production,
         coordinator: TetherCoordinator,
-         storage: TetherStorageManager = TetherStorageManager()
+        storage: TetherStorageManager = TetherStorageManager()
     ){
-        self.mainTimer = CountdownActor()   ///Initialize timer actor
+        self.baseClock = TimerFactory.makeTimePiece(timerType)
         self.storage = storage          /// Initialize storage
     }
     
@@ -111,7 +112,7 @@ class CoreViewModel: ObservableObject {
             currentState = .secondTether(coil)
             
             try await storage.saveCoil(coil)
-            await mainTimer.start()
+            await baseClock.start()
             await coordinator.navigate(to: .tether1Modal)
         /// Already have both tethers, ignore additional submissions
         case .secondTether, .completed:
@@ -183,7 +184,7 @@ class CoreViewModel: ObservableObject {
         case (.social, .complete):
             /// Finish flow; Handle social post completion
             Task {
-                await mainTimer.stop()
+                await baseClock.stop()
                 currentState = .empty
                 coordinator.navigate(to: .home)
             }
@@ -192,7 +193,7 @@ class CoreViewModel: ObservableObject {
         case (.tether1, .inProgress), (.tether2, .inProgress):
             Task {
                 await pause()
-                reset()
+                coordinator.reset()
                 await progressActor.updateProgress(progress)
             }
             coordinator.dismissModal()
@@ -203,7 +204,7 @@ class CoreViewModel: ObservableObject {
             if case .completed(let coil) = currentState {
                 Task {
                     try? await storage.moveCoilToCompleted(coil)
-                    reset()
+                    coordinator.reset()
                 }
             }
  
@@ -218,6 +219,19 @@ class CoreViewModel: ObservableObject {
         case (_, .cancel):
             coordinator.dismissModal()
         }
+    }
+    
+    ///Clear All Modals and Text
+    func clearEverythingFromUI() async {
+        
+        /// Clear clock
+        await timerCoordinator.stopAndClearEverything()
+        
+        /// Clear view state, text
+        currentState = .empty
+        currentTetherText = ""
+        /// Clear navigation/modals
+        coordinator.dismissModal()
     }
         
 }

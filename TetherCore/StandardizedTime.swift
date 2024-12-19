@@ -9,7 +9,6 @@ import Foundation
 
 protocol StandardizedTime: Actor {
     var isRunning: Bool { get set }
-    var progress: Float { get set }
     var secondsRemaining: Int { get set }
     var totalSeconds: Int { get }
     var task: Task<Void, Never>? { get set }
@@ -17,12 +16,12 @@ protocol StandardizedTime: Actor {
     func start() async -> AsyncStream<(seconds: Int, progress: Float)>
     func pause() async
     func stop() async
-    func formatTimeRemaining(_ seconds: Int) -> String
     
 }
+
 struct TimerUpdate {
     let seconds: Int
-    let progress: Float
+    let tickProgress: Float
 }
 
 /// Default implementations for common timer/countdown logic
@@ -34,7 +33,7 @@ extension StandardizedTime {
         // Initialize timer state
         isRunning = true
         secondsRemaining = totalSeconds
-        progress = 1.0
+//        progress = 1.0
     
         return AsyncStream { continuation  in
             task = Task {
@@ -46,11 +45,11 @@ extension StandardizedTime {
                         
                         ///Update state
                         secondsRemaining -= 1
-                        progress = Float(secondsRemaining) / Float(totalSeconds)
+                        let tickProgress = Float(secondsRemaining) / Float(totalSeconds)
                         ///Yield update
                         let update = TimerUpdate(
                             seconds: secondsRemaining,
-                            progress: progress
+                            tickProgress: tickProgress
                         )
                         continuation.yield((update))
                         
@@ -81,23 +80,17 @@ extension StandardizedTime {
         isRunning = false
         await cancelExistingTask()      /// Ensures synchronized cleanup
         secondsRemaining = totalSeconds
-        progress = 1.0
-    }
-    
-    nonisolated func formatTimeRemaining( _ seconds: Int) -> String {
-        let minutes = seconds / 60
-        return String(format: "%02d", minutes)
     }
 }
 
 
 /// Timer factory for dependency injection
 enum TimerFactory {
-    static func makeTimer(_ type: CountdownTypes) -> any TimerProtocol {
+    static func makeTimePiece(_ type: CountdownTypes) -> any StandardizedTime {
         switch type {
         case .production: return CountdownActor()
         case .six: return Countdown6Actor()
-        case .mind: return CountdownMindfulActor()
+        case .mind: return CoundownMindfulActor()
         }
     }
 }

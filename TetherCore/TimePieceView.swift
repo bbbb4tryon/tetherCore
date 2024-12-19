@@ -56,7 +56,7 @@ struct TimePieceView: View {
 //        switch action {
 //        case .inProgress:
 //            Task {
-//                await startTimer()
+//                await startClock()
 //                coordinator.showClock(true)
 //            }
 //        case .cancel:
@@ -82,7 +82,7 @@ struct TimePieceView: View {
 //            currentState = .secondTether(coil)
 //            Task {
 //                try? await storage.saveCoil(coil)
-//                await startTimer()
+//                await startClock()
 //                coordinator.showClock(true)
 //                coordinator.navigate(to: .tether1Modal)
 //            }

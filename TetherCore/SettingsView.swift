@@ -29,6 +29,7 @@ extension Bundle {
     }
 }
 
+@MainActor
 enum HapticStyle: String, CaseIterable, Identifiable {
     case gentle = "gentle"
     case medium = "medium"
@@ -44,14 +45,18 @@ enum HapticStyle: String, CaseIterable, Identifiable {
         }
     }
     
+    /// Local generator instances (prevents shared state
     func trigger() {
         switch self {
         case .gentle:
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            let generator = UINotificationFeedbackGenerator()
+            generator.notificationOccurred(.success)
         case .medium:
-            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            let generator = UIImpactFeedbackGenerator(style: .medium)
+            generator.impactOccurred()
         case .strong:
-            UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
+            let generator = UIImpactFeedbackGenerator(style: .heavy)
+            generator.impactOccurred()
         }
     }
 }

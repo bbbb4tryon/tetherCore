@@ -8,6 +8,7 @@
 import Foundation
 
 enum ModalType: Identifiable {
+    case returningUser
     case tether1
     case tether2
     case completion

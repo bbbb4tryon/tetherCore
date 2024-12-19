@@ -11,17 +11,18 @@ import Foundation
 
 struct CoreView: View {                             /// - Note: Conforms to Error, GlobalError, and LocalizedError protocols; IS for normal use
     @EnvironmentObject private var coordinator: TetherCoordinator
-    @StateObject private var coreVM = CoreViewModel(coordinator: TetherCoordinator())
+    @StateObject private var coreVM: CoreViewModel
     @FocusState private var field: Bool             /// - Note: For testing - comment out or in
     @State public var buttonWasPressed = false      /// Making a Declaration/State + public, for testing
     @State public var showProgress = false
-    @State var progress: TimePieceView
     
     let showTimer: Bool = false
-    let countdown: any StandardizedTime
     
     init(countdownType: CountdownTypes = .production){
-        self.countdown = countdownType.countdown
+        let coordinator = TetherCoordinator()
+            _coreVM = StateObject(wrappedValue: CoreViewModel(
+                timerType: countdownType, coordinator: coordinator
+            ))
     }
     var body: some View {
         NavigationStack {
@@ -122,13 +123,14 @@ struct CoreView: View {                             /// - Note: Conforms to Erro
     
     private var progressDisplay: some View {
         Group {
-            if showTimer {
+            if coordinator.showClock {
                 TimePieceView(
                     seconds: coreVM.countDownAmt,
                     showProgress: true,
                     label: "Tethered",
                     onZero: nil
                 )
+                .environmentObject(coordinator)
             }
         }
     }
@@ -137,7 +139,7 @@ struct CoreView: View {                             /// - Note: Conforms to Erro
         Button(action: {
             buttonWasPressed = true
             Task {
-                await coreVM.resetState()
+                await coreVM.clearEverythingFromUI()
             }
         }) {
             Text("Clear Data")
@@ -151,7 +153,7 @@ struct CoreView: View {                             /// - Note: Conforms to Erro
                     .fill(Color.theme.primaryBlue)
             )
             .shadow(radius: 5)
-            .opacity(coreVM.currentTetherText.isEmpty ? 0.6 : 1)
+            .opacity(coreVM.currentState == .empty ? 0.6 : 1)        /// or coreVM.currentTetherText.isEmpty?
             .animation(.easeInOut, value: coreVM.currentTetherText.isEmpty)
         }
 
@@ -176,15 +178,6 @@ struct CoreView: View {                             /// - Note: Conforms to Erro
         .shadow(radius: 5)
         .opacity(coreVM.currentTetherText.isEmpty ? 0.6 : 1)
         .animation(.easeInOut, value: coreVM.currentTetherText.isEmpty)
-    }
-    
-    @MainActor
-    private func handleModalPresentation(_ type: ModalType) async {
-        switch type {
-        case .tether1: await standardizedTime.start()
-        case .completion: await coordinator.showTimer(true)
-        default: break
-        }
     }
 }
 

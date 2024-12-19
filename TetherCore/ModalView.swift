@@ -11,17 +11,19 @@ struct ModalView: View {
     @EnvironmentObject var coordinator: TetherCoordinator      // No = or (), it is not initialized here and don't want it to be
     @ObservedObject var coreVM: CoreViewModel               // No = or (), it is not initialized here and don't want it to be
     @Environment(\.dismiss) private var dismiss
+    @State private var showEraseConfirmation = false
     @State private var showShareSheet = true
     let type: ModalType
-    let onAction: ((ModalAction) async throws -> Void)?        ///Pass async closures for actions
+    let onAction: ((ModalAction) async throws -> Void)?       ///Pass async closures for actions
     
     /// NECESSARY: handles ObservableObject properties
     init(
         type: ModalType,
-//        coordinator: TetherCoordinator,
+        coordinator: TetherCoordinator,
         coreVM: CoreViewModel
     ) {
         self.type = type
+        //        self.coordinator = coordinator { get }
         self.coreVM = coreVM
     }
     
@@ -43,6 +45,7 @@ struct ModalView: View {
                         tether: coil.tether2,
                         onZero: coreVM.isTether2Completed
                     )
+                case .returningUser: returningUserView
                 default: EmptyView()
                 }
             }
@@ -60,6 +63,7 @@ struct ModalView: View {
     
     private var title: String {
         switch type {
+        case .returningUser: return "Resume?:"
         case .tether1: return "Tethered to:"
         case .tether2: return "Tethered to:"
         case .completion: return "All Tasks Complete!"
@@ -75,7 +79,7 @@ struct ModalView: View {
                 Button("Share Achievement") {
                 }
                 .buttonStyle(.borderedProminent)
-                                
+                
                 Button("Skip") {
                     coordinator.navigate(to: .home)
                 }
@@ -88,8 +92,8 @@ struct ModalView: View {
         HStack(spacing: 20) {
             Button("Cancel") {
                 Task { @MainActor in
-                await coordinator.navigate(to: .home)
-                dismiss()
+                    await coordinator.navigate(to: .home)
+                    dismiss()
                 }
             }
             .buttonStyle(.bordered)
@@ -131,8 +135,50 @@ struct ModalView: View {
         }
     }
     
+    private var returningUserView: some View {
+        VStack(spacing: 20) {
+            Text("Welcome Back")
+                .font(.title)
+                .foregroundStyle(Color.theme.primaryBlue)
+            
+            ///Show current state/progress
+            if case .secondTether(let coil) = coreVM.currentState {
+                Text("You have a session in progress")
+                    .foregroundStyle(Color.theme.secondaryGreen)
+                
+                Button {
+                coordinator.resumeUserTimerFlow()
+            } label: {
+                    Text("Continue Session")
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Color.theme.buttonText)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.theme.primaryBlue)
+                        .cornerRadius(10)
+                }
+                // Clear data button
+                Button(action: {
+                    showEraseConfirmation = true
+                }) {
+                    Text("Clear & Start Over")
+                        .foregroundStyle(Color.theme.secondaryRed)
+                }
+                .alert("Clear All Data?", isPresented: $showEraseConfirmation) {
+                    Button("Cancel", role: .cancel) { }
+                    Button("Clear", role: .destructive) {
+                        Task {
+                            await coreVM.clearAllData()
+                            dismiss()
+                        }
+                    }
+                } message: {
+                    Text("This will clear all entered data and reset the timer.")
+                }
+            }
+        }
+    }
 }
-
 enum ModalAction {
     case complete
     case inProgress
