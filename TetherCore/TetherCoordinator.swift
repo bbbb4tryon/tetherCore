@@ -12,10 +12,22 @@ import Foundation
 class TetherCoordinator: ObservableObject {
     @Published var currentModal: ModalType?
     @Published var showClock: Bool = false
-    @Published var total20: Int = 1200
-    @Published var progress: Float = 0.0
+    private var timerCoordinator: TimerCoordinator? ///Correct: Optional & with late initialization
+//    @Published var total20: Int = 1200
+//    @Published var progress: Float = 0.0
     
-//    init(){} not necessary - all properties have default values
+    
+    ///Method to safely set dependency (avoids leaks)
+    func setTimerCoordinator(_ timerCoordinator: TimerCoordinator) {
+        self.timerCoordinator = timerCoordinator
+    }
+    
+    func reset() {
+        currentModal = nil
+        showClock = false
+    }
+    
+    /// init(){} not necessary - all properties have default values
     enum NavigationPath {
         case home
         case profile
@@ -24,11 +36,6 @@ class TetherCoordinator: ObservableObject {
         case tether2Modal
         case completionModal
         case socialModal
-    }
-    
-    func reset() {
-        currentModal = nil
-        showClock = false
     }
     
     func navigate(to path: NavigationPath) {
@@ -48,7 +55,7 @@ class TetherCoordinator: ObservableObject {
         currentModal = nil
     }
     
-    func showTimer(_ show: Bool) {
+    func handleClock(_ show: Bool) {
         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
             showClock = show
         }
@@ -67,5 +74,27 @@ class TetherCoordinator: ObservableObject {
         default:
             break
         }
+    }
+    
+    func handleReturningUser(_ state: CoreViewModel.TetherState) {
+        Task { @MainActor in
+            switch state {
+            case .firstTether:
+                currentModal = .returningUser
+            case .secondTether(let coil) where !coil.tether1.isCompleted:
+                /// Show tether1 modal
+                currentModal = .tether1
+            case .secondTether(let coil) where !coil.tether2.isCompleted:
+                // Show tether2 modal
+                currentModal = .tether2
+            default:
+                currentModal = nil
+            }
+        }
+    }
+    
+    /// Optional, see TimerCoordinator initialization at the top
+    func resumeUserTimerFlow() async {
+        await timerCoordinator?.resumeUserTimerFlow()
     }
 }

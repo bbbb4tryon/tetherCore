@@ -7,7 +7,7 @@
 
 import Foundation
 
-protocol StandardizedTime: Actor {
+protocol TimeProtocol: Actor {
     var isRunning: Bool { get set }
     var secondsRemaining: Int { get set }
     var totalSeconds: Int { get }
@@ -25,7 +25,7 @@ struct TimerUpdate {
 }
 
 /// Default implementations for common timer/countdown logic
-extension StandardizedTime {
+extension TimeProtocol {
     func start() async -> AsyncStream<TimerUpdate> {
         /// Cancel/clean up any existing timer
         ///  then creates and returns a new stream
@@ -66,7 +66,7 @@ extension StandardizedTime {
         }
     }
     
-    private func cancelExistingTask() async {
+    internal func cancelExistingTask() async {
         task?.cancel()      ///Signals task to stop
         task = nil          /// Waits for actor isolation before nullifying -> cancelExistingTask() in stop() synchronizes changes and cleanup
     }
@@ -81,12 +81,17 @@ extension StandardizedTime {
         await cancelExistingTask()      /// Ensures synchronized cleanup
         secondsRemaining = totalSeconds
     }
+    
+    nonisolated func formatTimeRemaining( _ seconds: Int) -> String {
+        let minutes = seconds / 60
+        return String(format: "%02d", minutes)
+    }
 }
 
 
 /// Timer factory for dependency injection
 enum TimerFactory {
-    static func makeTimePiece(_ type: CountdownTypes) -> any StandardizedTime {
+    static func makeTimePiece(_ type: CountdownTypes) -> any TimeProtocol {
         switch type {
         case .production: return CountdownActor()
         case .six: return Countdown6Actor()

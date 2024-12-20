@@ -12,7 +12,7 @@ enum CountdownTypes {
     case six            /// 6 seconds
     case mind           /// 3 minutes
     
-    var countdown: any StandardizedTime {
+    var countdown: any TimeProtocol {
         switch self {
         case .production: return CountdownActor()
         case .six: return Countdown6Actor()

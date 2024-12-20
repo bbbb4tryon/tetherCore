@@ -38,7 +38,7 @@ struct TimePieceView: View {
             if newValue == 0 {
                 Task { @MainActor in
                     await onZero?()        ///Optional Chaining
-                    coordinator.showTimer(false)
+                    coordinator.handleClock(false)
                 }
             }
         }
@@ -57,12 +57,12 @@ struct TimePieceView: View {
 //        case .inProgress:
 //            Task {
 //                await startClock()
-//                coordinator.showClock(true)
+//                tetherCoordinator.showClock(true)
 //            }
 //        case .cancel:
 //            Task {
 //                await mainTimer.stop()
-//                coordinator.showClock(false)
+//                tetherCoordinator.showClock(false)
 //            }
 //        default:
 //            break
@@ -83,7 +83,7 @@ struct TimePieceView: View {
 //            Task {
 //                try? await storage.saveCoil(coil)
 //                await startClock()
-//                coordinator.showClock(true)
+//                tetherCoordinator.showClock(true)
 //                coordinator.navigate(to: .tether1Modal)
 //            }
 //            

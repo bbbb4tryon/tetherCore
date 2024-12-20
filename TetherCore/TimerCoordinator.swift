@@ -11,7 +11,7 @@ import SwiftUI
 //[Protocol][Conformance StorageManaging][Storage][-> Void]
 @MainActor
 class TimerCoordinator: ObservableObject {
-    @Published private(set) var betterNameTimer: any StandardizedTime
+    @Published private(set) var betterNameTimer: any TimeProtocol
     @Published private(set) var isRunning = false
     @Published private(set) var progress: Float = 0.0
     @Published private(set) var secs: Int
@@ -39,7 +39,7 @@ class TimerCoordinator: ObservableObject {
     }
     
     private init(
-        timer: any StandardizedTime,
+        timer: any TimeProtocol,
         seconds: Int,
         tetherCoordinator: TetherCoordinator,
         coreVM: CoreViewModel
@@ -79,7 +79,7 @@ class TimerCoordinator: ObservableObject {
 //        countDownAmt = 1200
 //        Task {
 //            await startClock()
-//            coordinator.showClock(true)
+//            tetherCoordinator.showClock(true)
 //        }
     }
     func pauseTimer() async {    /// [Function][Timer][CoreVM][-> Void]
@@ -125,7 +125,7 @@ class TimerCoordinator: ObservableObject {
         }
     }
 ///Clearing State and UI
-    func stopAndClearEverything() async {
+    func stopsCountdownClearsState() async {
         ///Use CountdownActor to stop timer completely
         Task {
             await betterNameTimer.stop()

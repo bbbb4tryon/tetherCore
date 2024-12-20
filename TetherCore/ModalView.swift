@@ -17,14 +17,15 @@ struct ModalView: View {
     let onAction: ((ModalAction) async throws -> Void)?       ///Pass async closures for actions
     
     /// NECESSARY: handles ObservableObject properties
+    ///     Remember: match to how it is used (may need modification as you build)
     init(
         type: ModalType,
-        coordinator: TetherCoordinator,
-        coreVM: CoreViewModel
-    ) {
+        coreVM: CoreViewModel,
+        onAction: ((ModalAction) async throws -> Void)? = nil
+    ){
         self.type = type
-        //        self.coordinator = coordinator { get }
         self.coreVM = coreVM
+        self.onAction = onAction
     }
     
     var body: some View {
@@ -45,7 +46,7 @@ struct ModalView: View {
                         tether: coil.tether2,
                         onZero: coreVM.isTether2Completed
                     )
-                case .returningUser: returningUserView
+                case .returningUser: returningUser_Buttons
                 default: EmptyView()
                 }
             }
@@ -135,9 +136,9 @@ struct ModalView: View {
         }
     }
     
-    private var returningUserView: some View {
+    var returningUser_Buttons: some View {
         VStack(spacing: 20) {
-            Text("Welcome Back")
+            Text("Welcome Back!")
                 .font(.title)
                 .foregroundStyle(Color.theme.primaryBlue)
             
@@ -146,9 +147,11 @@ struct ModalView: View {
                 Text("You have a session in progress")
                     .foregroundStyle(Color.theme.secondaryGreen)
                 
-                Button {
-                coordinator.resumeUserTimerFlow()
-            } label: {
+                Button(action: {
+                    Task { @MainActor in
+                        await coordinator.resumeUserTimerFlow()
+                    }
+            }, label: {
                     Text("Continue Session")
                         .fontWeight(.semibold)
                         .foregroundStyle(Color.theme.buttonText)
@@ -157,21 +160,24 @@ struct ModalView: View {
                         .background(Color.theme.primaryBlue)
                         .cornerRadius(10)
                 }
+            )
+                
                 // Clear data button
                 Button(action: {
                     showEraseConfirmation = true
                 }) {
-                    Text("Clear & Start Over")
-                        .foregroundStyle(Color.theme.secondaryRed)
+                    Text("Start Over")
+                        .foregroundStyle(Color.theme.accentSalmon)
                 }
                 .alert("Clear All Data?", isPresented: $showEraseConfirmation) {
                     Button("Cancel", role: .cancel) { }
                     Button("Clear", role: .destructive) {
                         Task {
-                            await coreVM.clearAllData()
+                            await coreVM.clearEverythingFromUI()
                             dismiss()
                         }
                     }
+                    .foregroundStyle(Color.red)
                 } message: {
                     Text("This will clear all entered data and reset the timer.")
                 }

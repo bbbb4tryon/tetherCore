@@ -7,12 +7,12 @@
 
 import Foundation
 
-actor Countdown6Actor: StandardizedTime {
-    private var task: Task<Void, Never>?
-    private(set) var isRunning = false
-    private(set) var secondsRemaining: Int
-    private(set) var progress: Float = 1.0
-    private let totalSeconds = 6
+actor Countdown6Actor: TimeProtocol {
+    var task: Task<Void, Never>?
+    var isRunning = false
+    var secondsRemaining: Int
+    var progress: Float = 1.0
+    let totalSeconds = 6
     
     nonisolated let id = UUID()
     
@@ -50,28 +50,6 @@ actor Countdown6Actor: StandardizedTime {
                 continuation.finish()
             }
         }
-    }
-    
-    private func cancelExistingTask() async {
-        task?.cancel()      ///Signals task to stop
-        task = nil          /// Waits for actor isolation before nullifying -> cancelExistingTask() in stop() synchronizes changes and cleanup
-    }
-    
-    func pause() async {
-        isRunning = false
-        await cancelExistingTask()
-    }
-    
-    func stop() async {
-        isRunning = false
-        await cancelExistingTask()      /// Ensures synchronized cleanup
-        secondsRemaining = totalSeconds
-        progress = 1.0
-    }
-    
-    nonisolated func formatTimeRemaining( _ seconds: Int) -> String {
-        let minutes = seconds / 60
-        return String(format: "%02d", minutes)
     }
 }
 

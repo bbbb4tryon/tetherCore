@@ -9,84 +9,89 @@ import SwiftUI
 import Foundation
 
 
-struct CoreView: View {                             /// - Note: Conforms to Error, GlobalError, and LocalizedError protocols; IS for normal use
-    @EnvironmentObject private var coordinator: TetherCoordinator
+struct CoreView: View {                                         ///Conforms to Error, GlobalError, and LocalizedError protocols; IS for normal use
+    @EnvironmentObject var tetherCoordinator: TetherCoordinator ///No TIMERcoordinator needed - managed by TETHERcoordinator
     @StateObject private var coreVM: CoreViewModel
-    @FocusState private var field: Bool             /// - Note: For testing - comment out or in
-    @State public var buttonWasPressed = false      /// Making a Declaration/State + public, for testing
+    @FocusState private var field: Bool                         ///Note: During testing - comment out or in
+    @State public var buttonWasPressed = false                  ///Making a Declaration/State + public, for testing
     @State public var showProgress = false
     
-    let showTimer: Bool = false
+    let showClock: Bool = false
     
-    init(countdownType: CountdownTypes = .production){
-        let coordinator = TetherCoordinator()
-            _coreVM = StateObject(wrappedValue: CoreViewModel(
-                timerType: countdownType, coordinator: coordinator
-            ))
+    init(
+        countdownType: CountdownTypes = .production
+    ){
+        ///Initializes CoreVM first, WITH tetherCoordinator
+        _coreVM = StateObject(wrappedValue: CoreViewModel(
+            timerType: countdownType,
+            tetherCoordinator: TetherCoordinator()
+        ))
     }
+    
     var body: some View {
         NavigationStack {
-            VStack(spacing: 20){
-                header
-                
-                VStack(alignment: .leading,spacing: 16){
-                    input
-                    progressDisplay
+            ZStack {
+                VStack(spacing: 20){
+                    header
                     
-                    ///Show and display first tether, second tether
-                    switch coreVM.currentState {
-                    case .firstTether(let tether):
-                        TetherRowView(coordinator: coordinator, tether: tether, onZero: false)
-                    case .secondTether(let coil):
-                        TetherRowView(coordinator: coordinator, tether: coil.tether1, onZero: coreVM.isTether1Completed)
-                        TetherRowView(coordinator: coordinator, tether: coil.tether2, onZero: coreVM.isTether2Completed)
-                    case .completed(_):
-                        EmptyView()
-                    case .empty:
-                        EmptyView()
+                    VStack(alignment: .leading,spacing: 16){
+                        input
+                        progressDisplay
+                        
+                        ///Show and display first tether, second tether
+                        switch coreVM.currentState {
+                        case .firstTether(let tether):
+                            TetherRowView(coordinator: tetherCoordinator, tether: tether, onZero: false)
+                        case .secondTether(let coil):
+                            TetherRowView(coordinator: tetherCoordinator, tether: coil.tether1, onZero: coreVM.isTether1Completed)
+                            TetherRowView(coordinator: tetherCoordinator, tether: coil.tether2, onZero: coreVM.isTether2Completed)
+                        case .completed(_):
+                            EmptyView()
+                        case .empty:
+                            EmptyView()
+                        }
+                        
+                        clearData_Button
+                        submit_Button
+                        
+                        
+                        ///Pushes content up ~ vertical centering
+                        Spacer()
                     }
-                    
-                    clearData_Button
-                    submit_Button
-                    
-                    
-                    ///Pushes content up ~ vertical centering
-                    Spacer()
-                }
-                .navigationBarBackButtonHidden(true)
-                .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button(action: { coordinator.navigate(to: .home) }) {
-                            Image(systemName: "chevron.left")
-                                .imageScale(.large)
+                    .navigationBarBackButtonHidden(true)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarLeading) {
+                            Button(action: { tetherCoordinator.navigate(to: .home) }) {
+                                Image(systemName: "chevron.left")
+                                    .imageScale(.large)
+                            }
                         }
                     }
                 }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .sheet(item: $coordinator.currentModal) { modalType in
-                ModalView(
-                    type: modalType,
-                    coreVM: coreVM,
-                    onAction: { action in
-                        await handleModalPresentation(modalType)
-                    }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                /// Sheet: bound to MainActor tethercoordinator; presents ModalView on main thread
+                .sheet(item: $tetherCoordinator.currentModal) { modalType in
+                    ModalView(
+                        type: modalType,
+                        coreVM: coreVM
+                    )
+                    .environmentObject(tetherCoordinator)
+                }
+                .alert(
+                    "Error",
+                    isPresented: Binding(
+                        get: {  coreVM.error != nil },
+                        set: { if !$0 { coreVM.clearError() }}
+                    ),
+                    actions: { Button("OK") { coreVM.clearError() }},
+                    message: { Text(coreVM.error?.message ?? "" )}
                 )
-                .environmentObject(coordinator)
-                    .task { /// Handles async on appear
-                        await handleModalPresentation(modalType)
-                    }
+                
+                //VSTACK ENDS
+                .continuationOverlay(coordinator: tetherCoordinator, coreVM: coreVM)
             }
-            .alert(
-                "Error",
-                isPresented: Binding(
-                    get: {  coreVM.error != nil },
-                    set: { if !$0 { coreVM.clearError() }}
-                ),
-                actions: { Button("OK") { coreVM.clearError() }},
-                message: { Text(coreVM.error?.message ?? "" )}
-            )
         }
+
     }
     private var header: some View {
         get {
@@ -106,35 +111,35 @@ struct CoreView: View {                             /// - Note: Conforms to Erro
             coreVM.currentState.inputPlaceholder,
             text: $coreVM.currentTetherText
         )
-            .accessibilityIdentifier("Required")
-            .textFieldStyle(.roundedBorder)
-            .padding(.horizontal, 20)
-            .frame(maxWidth: 300)
-            .focused($field)
-            .shadow(color: Color.theme.primaryBlue.opacity(0.1), radius: 5)
-            .submitLabel(.done)
-            .onSubmit {
-                buttonWasPressed = true     //JUST the action, not the whole button view
-                Task {
-                    try? await coreVM.submitTether()
-                }
+        .accessibilityIdentifier("Required")
+        .textFieldStyle(.roundedBorder)
+        .padding(.horizontal, 20)
+        .frame(maxWidth: 300)
+        .focused($field)
+        .shadow(color: Color.theme.primaryBlue.opacity(0.1), radius: 5)
+        .submitLabel(.done)
+        .onSubmit {
+            buttonWasPressed = true     //JUST the action, not the whole button view
+            Task {
+                try? await coreVM.submitTether()
             }
+        }
     }
     
     private var progressDisplay: some View {
         Group {
-            if coordinator.showClock {
+            if tetherCoordinator.showClock {
                 TimePieceView(
                     seconds: coreVM.countDownAmt,
                     showProgress: true,
                     label: "Tethered",
                     onZero: nil
                 )
-                .environmentObject(coordinator)
+                .environmentObject(tetherCoordinator)
             }
         }
     }
-
+    
     private var clearData_Button: some View {
         Button(action: {
             buttonWasPressed = true
@@ -147,16 +152,16 @@ struct CoreView: View {                             /// - Note: Conforms to Erro
                 .foregroundStyle(Color.theme.buttonText)
                 .padding(.horizontal, 40)
                 .padding(.vertical, 12)
-            }
-            .background(
-                RoundedRectangle(cornerRadius: 25)
-                    .fill(Color.theme.primaryBlue)
-            )
-            .shadow(radius: 5)
-            .opacity(coreVM.currentState == .empty ? 0.6 : 1)        /// or coreVM.currentTetherText.isEmpty?
-            .animation(.easeInOut, value: coreVM.currentTetherText.isEmpty)
         }
-
+        .background(
+            RoundedRectangle(cornerRadius: 25)
+                .fill(Color.theme.primaryBlue)
+        )
+        .shadow(radius: 5)
+        .opacity(coreVM.currentState == .empty ? 0.6 : 1)        /// or coreVM.currentTetherText.isEmpty?
+        .animation(.easeInOut, value: coreVM.currentTetherText.isEmpty)
+    }
+    
     private var submit_Button: some View {
         Button(action: {
             buttonWasPressed = true     ///tied to @State, is 'public' for testing via `testButton()` in testing
@@ -180,10 +185,26 @@ struct CoreView: View {                             /// - Note: Conforms to Erro
         .animation(.easeInOut, value: coreVM.currentTetherText.isEmpty)
     }
 }
+    
+extension View {
+    func continuationOverlay(
+        coordinator: TetherCoordinator,
+        coreVM: CoreViewModel
+    ) -> some View {
+        
+        overlay {
+            if coreVM.currentState.needsRestoration {
+                ContinueOverlay(coreVM: coreVM)
+            }
+        }
+    }
+}
+    
 
 #Preview {
-    CoreView()
-        .environmentObject(TetherCoordinator())
+    let coordinator = TetherCoordinator()
+    return CoreView()
+        .environmentObject(coordinator)
         .environment(\.colorScheme, .light)
 }
 //func validate(){
