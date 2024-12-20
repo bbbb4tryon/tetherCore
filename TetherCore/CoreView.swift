@@ -17,13 +17,15 @@ struct CoreView: View {                                         ///Conforms to E
     @State public var showProgress = false
     
     let showClock: Bool = false
+    private let countdownType: CountdownTypes                   /// Add this property for 'outside of scope' use by modifiers
     
     init(
         countdownType: CountdownTypes = .production
     ){
         ///Initializes CoreVM first, WITH tetherCoordinator
+        self.countdownType = countdownType                      /// Store it ^^
         _coreVM = StateObject(wrappedValue: CoreViewModel(
-            timerType: countdownType,
+            clockType: countdownType,
             tetherCoordinator: TetherCoordinator()
         ))
     }
@@ -91,7 +93,17 @@ struct CoreView: View {                                         ///Conforms to E
                 .continuationOverlay(coordinator: tetherCoordinator, coreVM: coreVM)
             }
         }
-
+        .onAppear {
+            ///Creates a timer coordinator AFTER view is created
+            Task {
+                let timerCoordinator = await TimerCoordinator.create(
+                    tetherCoordinator: tetherCoordinator,
+                    coreVM: coreVM,
+                    clockType: countdownType
+                )
+                tetherCoordinator.setTimerCoordinator(timerCoordinator)
+            }
+        }
     }
     private var header: some View {
         get {

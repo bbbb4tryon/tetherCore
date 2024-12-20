@@ -64,7 +64,7 @@ class CoreViewModel: ObservableObject { ///State Managment confined to main thre
     private let tetherCoordinator: TetherCoordinator
     private let storage: TetherStorageManager
     private let baseClock: any TimeProtocol
-    private let timerCoordinator: TimerCoordinator
+    private var timerCoordinator: TimerCoordinator?         /// Optional; is VAR now because of this
     
     
     ///DELETE NOW?
@@ -76,13 +76,18 @@ class CoreViewModel: ObservableObject { ///State Managment confined to main thre
     
     /// Necessary - keeps initialization of actors and dependencies
     init(
-        timerType: CountdownTypes,
+        clockType: CountdownTypes,
         tetherCoordinator: TetherCoordinator,
         storage: TetherStorageManager = TetherStorageManager()
     ){
-        self.baseClock = TimerFactory.makeTimePiece(timerType)
+        self.baseClock = TimerFactory.makeTimePiece(clockType)
         self.tetherCoordinator = tetherCoordinator
-        self.storage = storage          /// Initialize storage
+        self.storage = storage                              /// Initialize storage
+        self.timerCoordinator = nil                         /// Explicitly nil because its optional, should flip its switch
+    }
+    /// Method sets the coordinator later
+    func setTimerCoordinator(_ coordinator: TimerCoordinator) {
+        self.timerCoordinator = coordinator
     }
     
     //MARK: Computed Properties
@@ -187,7 +192,7 @@ class CoreViewModel: ObservableObject { ///State Managment confined to main thre
 //          guard let !tetherCoordinator.navigate(to: .tether1Modal) else { return }
                 coil.tether2.isCompleted = true
                 currentState = .completed(coil)
-                timerCoordinator.showClock = true   //Starts when tapped
+                timerCoordinator?.showClock = true   //Starts when tapped
                 tetherCoordinator.navigate(to: .completionModal)
             }
  
@@ -211,9 +216,9 @@ class CoreViewModel: ObservableObject { ///State Managment confined to main thre
             /// In Progress
         case (.tether1, .inProgress), (.tether2, .inProgress):
             Task {
-                await timerCoordinator.pauseTimer()
+                await timerCoordinator?.pauseTimer()
                 tetherCoordinator.reset()
-                timerCoordinator.showClock = true
+                timerCoordinator?.showClock = true
             }
             tetherCoordinator.dismissModal()
 
@@ -242,8 +247,8 @@ class CoreViewModel: ObservableObject { ///State Managment confined to main thre
             /// Handles returningUser completion
         case (.returningUser, .complete):
             Task {
-                await timerCoordinator.startClock()
-                timerCoordinator.showClock = true
+                await timerCoordinator?.startClock()
+                timerCoordinator?.showClock = true
                 tetherCoordinator.dismissModal()
             }
         }
@@ -253,7 +258,7 @@ class CoreViewModel: ObservableObject { ///State Managment confined to main thre
     func clearEverythingFromUI() async {
         
         /// Clear clock
-        await timerCoordinator.stopsCountdownClearsState()
+        await timerCoordinator?.stopsCountdownClearsState()
         
         /// Clear view state, text
         currentState = .empty
