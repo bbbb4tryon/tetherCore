@@ -30,7 +30,7 @@ extension TimeProtocol {
         /// Cancel/clean up any existing timer
         ///  then creates and returns a new stream
         await cancelExistingTask()
-        // Initialize timer state
+        /// Initialize timer state
         isRunning = true
         secondsRemaining = totalSeconds
 //        progress = 1.0

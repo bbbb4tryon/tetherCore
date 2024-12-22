@@ -8,7 +8,7 @@
 import Foundation
 
 //[Protocol][Conformance StorageManaging][Storage][-> Void]
-actor TetherStorageManager {
+actor StorageManager {
     private let defaults = UserDefaults.standard
     private let coilsKey = "stored_coils"
     let maxCoils = 25

@@ -62,7 +62,7 @@ class CoreViewModel: ObservableObject { ///State Managment confined to main thre
     @Published private(set) var error: GlobalError?
 
     private let tetherCoordinator: TetherCoordinator
-    private let storage: TetherStorageManager
+    private let storage: StorageManager
     private let baseClock: any TimeProtocol
     private var timerCoordinator: TimerCoordinator?         /// Optional; is VAR now because of this
     
@@ -78,7 +78,7 @@ class CoreViewModel: ObservableObject { ///State Managment confined to main thre
     init(
         clockType: CountdownTypes,
         tetherCoordinator: TetherCoordinator,
-        storage: TetherStorageManager = TetherStorageManager()
+        storage: StorageManager = StorageManager()
     ){
         self.baseClock = TimerFactory.makeTimePiece(clockType)
         self.tetherCoordinator = tetherCoordinator
