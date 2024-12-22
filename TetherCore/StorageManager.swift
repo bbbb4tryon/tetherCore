@@ -17,17 +17,12 @@ actor StorageManager {
     func loadCoils() async throws  -> [Coil] {
         do {
             guard let data = defaults.data(forKey: coilsKey) else {
-                throw StorageManagerError.failedLoading
+                return []
             }
-            
-            do {
-                return try JSONDecoder().decode([Coil].self, from: data)
+            return try JSONDecoder().decode([Coil].self, from: data)
             } catch {
                 throw StorageManagerError.decodingFailure
             }
-        } catch {
-            throw StorageManagerError.failedLoading
-        }
     }
     
     ///[Function][Async][ProfileStorageManager][-> Void]
@@ -42,26 +37,24 @@ actor StorageManager {
             }
             
             /// Saves the coils - Do not need another or any save()
-            try await saveCoils(coils)
-        } catch {
-            throw StorageManagerError.failedSave
-        }
-    }
-    
-    func moveCoilToCompleted(_ coil: Coil) async throws {
-        var coils = try await loadCoils()
-        if let index = coils.firstIndex(where: { $0.id == coil.id }) {
-            coils[index] = coil
-            try await saveCoils(coils)
-        }
-    }
-    
-    private func saveCoils(_ coils: [Coil]) async throws {
-        do {
             let data = try JSONEncoder().encode(coils)
             defaults.set(data, forKey: coilsKey)
         } catch {
             throw StorageManagerError.encodingFailure
+        }
+    }
+    
+    func moveCoilToCompleted(_ coil: Coil) async throws {
+        do {
+            var coils = try await loadCoils()
+            guard let index = coils.firstIndex(where: { $0.id == coil.id }) else {
+                throw StorageManagerError.invalidDataFormat
+            }
+            coils[index] = coil
+            let data = try JSONEncoder().encode(coils)
+            defaults.set(data, forKey: coilsKey)
+        } catch {
+            throw StorageManagerError.failedSave
         }
     }
 }
