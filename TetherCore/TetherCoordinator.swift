@@ -7,12 +7,13 @@
 
 import SwiftUI
 import Foundation
-///Coordinator Pattern to improve modal flow
-@MainActor ///Explicitly MainActor because UI updates
+                                                            ///Coordinator Pattern to improve modal flow
+@MainActor                                                  ///Explicitly MainActor because UI updates
 class TetherCoordinator: ObservableObject {
     @Published var currentModal: ModalType?
+    @Published private(set) var error: CoordinatorError?    ///Uses published property for error state
     @Published var showClock: Bool = false
-    private var timerCoordinator: TimerCoordinator? ///Correct: Optional & with late initialization
+    private var timerCoordinator: TimerCoordinator?         ///Correct: Optional & with late initialization
 //    @Published var total20: Int = 1200
 //    @Published var progress: Float = 0.0
     
@@ -78,19 +79,27 @@ class TetherCoordinator: ObservableObject {
     
     func handleReturningUser(_ state: CoreViewModel.TetherState) {
         Task { @MainActor in
-            switch state {
-            case .firstTether:
-                currentModal = .returningUser
-            case .secondTether(let coil) where !coil.tether1.isCompleted:
-                /// Show tether1 modal
-                currentModal = .tether1
-            case .secondTether(let coil) where !coil.tether2.isCompleted:
-                // Show tether2 modal
-                currentModal = .tether2
-            default:
-                currentModal = nil
-            }
+            if timerCoordinator == nil {
+                error = .timerCoordinatorMissing
+                return
+                }
+                switch state {
+                case .firstTether:
+                    currentModal = .returningUser
+                case .secondTether(let coil) where !coil.tether1.isCompleted:
+                    /// Show tether1 modal
+                    currentModal = .tether1
+                case .secondTether(let coil) where !coil.tether2.isCompleted:
+                    // Show tether2 modal
+                    currentModal = .tether2
+                default:
+                    currentModal = nil
+                }
         }
+    }
+    
+    func clearError() {
+        error = nil
     }
     
     /// Optional, see TimerCoordinator initialization at the top

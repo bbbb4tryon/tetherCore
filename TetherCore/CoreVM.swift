@@ -54,12 +54,12 @@ class CoreViewModel: ObservableObject { ///State Managment confined to main thre
     }
     
 //    @EnvironmentObject var coordinator: TetherCoordinator
+    @Published private(set) var error: GlobalError?
     @Published var currentTetherText: String = ""
+    @Published var showClock: Bool = false
     @Published private(set) var currentState: TetherState = .empty
     @Published private(set) var progress: Float = 0.0
     @Published private(set) var countDownAmt: Int = 1200     /// 20 minutes
-    @Published var showClock: Bool = false
-    @Published private(set) var error: GlobalError?
 
     private let tetherCoordinator: TetherCoordinator
     private let storage: StorageManager
@@ -113,8 +113,9 @@ class CoreViewModel: ObservableObject { ///State Managment confined to main thre
     
 
     //MARK: Actions
-    /// Flow of tethers/input
+    /// Flow of tethers/input -BUSINESS Logic Layer
     func submitTether() async throws {
+        ///Generates error; validates input
         guard !currentTetherText.isEmpty else { return }
         let newTether = Tether(tetherText: currentTetherText)
         

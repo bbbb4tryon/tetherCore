@@ -79,15 +79,23 @@ struct CoreView: View {                                         ///Conforms to E
                     )
                     .environmentObject(tetherCoordinator)
                 }
+                ///Presentation logic: binds to error state, shows messages, user Interaction
                 .alert(
                     "Error",
                     isPresented: Binding(
                         get: {  coreVM.error != nil },
                         set: { if !$0 { coreVM.clearError() }}
-                    ),
-                    actions: { Button("OK") { coreVM.clearError() }},
-                    message: { Text(coreVM.error?.message ?? "" )}
-                )
+                    )
+                    ) {
+                        Button("OK") { coreVM.clearError() }
+                    } message: {
+                        if let error = coreVM.error {
+                            Text(error.message)
+                            if let recovery = (error as? LocalizedError)?.recoverySuggestion {
+                                Text(recovery)
+                            }
+                        }
+                    }
                 
                 //VSTACK ENDS
                 .continuationOverlay(coordinator: tetherCoordinator, coreVM: coreVM)

@@ -13,30 +13,27 @@ protocol TimeProtocol: Actor {
     var totalSeconds: Int { get }
     var task: Task<Void, Never>? { get set }
     
-    func start() async -> AsyncStream<(seconds: Int, progress: Float)>
-    func pause() async
-    func stop() async
+    func start() async throws -> AsyncStream<(seconds: Int, progress: Float)>
+    func pause() async throws
+    func stop() async throws
     
 }
 
 struct TimerUpdate {
     let seconds: Int
-    let tickProgress: Float
+    let progress: Float
+    
+    var asTuple: (seconds: Int, progress: Float) {
+        return (seconds: seconds, progress: progress)
+    }
 }
 
 /// Default implementations for common timer/countdown logic
 extension TimeProtocol {
-    func start() async -> AsyncStream<TimerUpdate> {
-        /// Cancel/clean up any existing timer
-        ///  then creates and returns a new stream
-        await cancelExistingTask()
-        /// Initialize timer state
-        isRunning = true
-        secondsRemaining = totalSeconds
-//        progress = 1.0
-    
-        return AsyncStream { continuation  in
-            task = Task {
+    /// Helper function to manage timer updates
+    func createTimerStream() -> AsyncStream<(seconds: Int, progress: Float)> {
+        AsyncStream { continuation  in
+            task = Task<Void, Never> {      /// Task defined to non-throw
                 ///Timer loop
                 while !Task.isCancelled && isRunning && secondsRemaining > 0 {
                     do {
@@ -47,24 +44,35 @@ extension TimeProtocol {
                         secondsRemaining -= 1
                         let tickProgress = Float(secondsRemaining) / Float(totalSeconds)
                         ///Yield update
-                        let update = TimerUpdate(
-                            seconds: secondsRemaining,
-                            tickProgress: tickProgress
-                        )
-                        continuation.yield((update))
-                        
+                        let update = TimerUpdate(seconds: secondsRemaining, progress: tickProgress)
+                        continuation.yield(update.asTuple)
                     } catch {
+                        isRunning = false
                         break
                     }
-                    
-                    if secondsRemaining == 0 {
-                        isRunning = false
-                    }
-                    continuation.finish()
                 }
+                if secondsRemaining == 0 { isRunning = false }
+                continuation.finish()
             }
         }
     }
+    
+    func start() async throws -> AsyncStream<(seconds: Int, progress: Float)> {
+        do {
+            /// Cancel/clean up any existing timer
+            ///  then creates and returns a new stream
+            await cancelExistingTask()
+            /// Initialize timer state
+            isRunning = true
+            secondsRemaining = totalSeconds
+            //        progress = 1.0
+            
+            return createTimerStream()
+            } catch {
+            throw TimerError.invalidStateTransition
+        }
+    }
+    
     
     internal func cancelExistingTask() async {
         task?.cancel()      ///Signals task to stop
