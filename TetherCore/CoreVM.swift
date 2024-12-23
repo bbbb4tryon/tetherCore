@@ -51,6 +51,11 @@ class CoreViewModel: ObservableObject { ///State Managment confined to main thre
         }
     }
     
+    /// Types of the limits (at correctly stated at the 'type level'
+    private enum Constants {
+        static let inputLimit = 160
+    }
+    
 //    @EnvironmentObject var coordinator: TetherCoordinator
     @Published private(set) var error: GlobalError?
     @Published var currentTetherText: String = ""
@@ -58,6 +63,7 @@ class CoreViewModel: ObservableObject { ///State Managment confined to main thre
     @Published private(set) var currentState: TetherState = .empty
     @Published private(set) var progress: Float = 0.0
     @Published private(set) var countDownAmt: Int = 1200     /// 20 minutes
+    @Published private(set) var inputLimit = Constants.inputLimit
 
     private let tetherCoordinator: TetherCoordinator
     private let storage: StorageManager
@@ -114,7 +120,7 @@ class CoreViewModel: ObservableObject { ///State Managment confined to main thre
     /// Flow of tethers/input -BUSINESS Logic Layer
     func submitTether() async throws {
         ///Generates error; validates input
-        guard !currentTetherText.isEmpty else { return }
+        guard !currentTetherText.isEmpty else { throw StateTransitionError.invalidStateChange }
         let newTether = Tether(tetherText: currentTetherText)
         
         switch currentState {
@@ -158,18 +164,19 @@ class CoreViewModel: ObservableObject { ///State Managment confined to main thre
         }
         
         /// Validation
-        func genericValidation() throws {
-            do {
-                validate()
-            } catch let error {
-                self.error = CoreVMError.storageFailure
-            }
+    func validateInput() throws {
+        if currentTetherText.isEmpty {
+            throw InputValidationError.emptyText
         }
-        func validate(){
-            guard !currentTetherText.isEmpty else { return }
+        if currentTetherText.count > inputLimit {
+            throw InputValidationError.invalidLength
+        }
+        ///State-specific validation handled here
+        if case .empty = currentState, currentTetherText.count > inputLimit {
+            throw CoreVMError.storageFailure
+        }
+    }
             
-        }
-    
     //MARK: Modal Actions Management
     func handleModalAction(for type: ModalType, action: ModalAction) async throws {
         switch (type, action) {
@@ -264,7 +271,6 @@ class CoreViewModel: ObservableObject { ///State Managment confined to main thre
         /// Clear navigation/modals
         tetherCoordinator.dismissModal()
     }
-        
 }
 
 
