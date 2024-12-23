@@ -9,8 +9,6 @@ import Foundation
 import SwiftUI
 
 // MARK: - CoreViewModel
-/// CoreViewModel
-/// 
 @MainActor
 class CoreViewModel: ObservableObject { ///State Managment confined to main thread; good
     
@@ -122,15 +120,18 @@ class CoreViewModel: ObservableObject { ///State Managment confined to main thre
         switch currentState {
         case .empty:
             currentState = .firstTether(newTether)
-            
+    
         case .firstTether(let firstTether):
             let coil = Coil(tether1: firstTether, tether2: newTether)
             currentState = .secondTether(coil)
-            
-            try await storage.saveCoil(coil)
-            await baseClock.start()
-            await tetherCoordinator.navigate(to: .tether1Modal)
-        /// Already have both tethers, ignore additional submissions
+            do {
+                try? await storage.saveCoil(coil)
+                try await baseClock.start()
+                tetherCoordinator.navigate(to: .tether1Modal)
+        } catch {
+            self.error = CoreVMError.storageFailure
+        }
+            /// Already have both tethers, ignore additional submissions
         case .secondTether, .completed:
             break
         }
@@ -159,8 +160,8 @@ class CoreViewModel: ObservableObject { ///State Managment confined to main thre
         /// Validation
         func genericValidation() throws {
             do {
-                try validate()
-            } catch {
+                validate()
+            } catch let error {
                 self.error = CoreVMError.storageFailure
             }
         }
@@ -185,7 +186,7 @@ class CoreViewModel: ObservableObject { ///State Managment confined to main thre
             if case .secondTether(var coil) = currentState {
                 coil.tether1.isCompleted = true
                 currentState = .secondTether(coil)
-                await tetherCoordinator.navigate(to: .tether2Modal)
+                tetherCoordinator.navigate(to: .tether2Modal)
             }
             
         case (.tether2, .complete):
@@ -245,13 +246,9 @@ class CoreViewModel: ObservableObject { ///State Managment confined to main thre
         case (_, .cancel):
             tetherCoordinator.dismissModal()
             
-            /// Handles returningUser completion
+            /// Note: resumeUserTimerFlow() already handles returningUser completion
         case (.returningUser, .complete):
-            Task {
-                await timerCoordinator?.startClock()
-                timerCoordinator?.showClock = true
-                tetherCoordinator.dismissModal()
-            }
+            try await timerCoordinator?.resumeUserTimerFlow()
         }
     }
     

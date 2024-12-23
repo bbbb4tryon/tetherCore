@@ -6,8 +6,9 @@
 //
 //
 import SwiftUI
-//
-enum CountdownTypes {
+
+
+enum CountdownTypes {   /// Don't add throws or initalizations - screws up TimerCoordinator
     case production     /// 20 minutes
     case six            /// 6 seconds
     case mind           /// 3 minutes

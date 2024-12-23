@@ -27,9 +27,9 @@ class TimerCoordinator: ObservableObject {
         coreVM: CoreViewModel,
         clockType: CountdownTypes = .production
     ) async -> TimerCoordinator {
+        /// Factory call; can't fail (exhaustive enum; each case returns a concrete type implementing TimeProtocol; all return values are actor instantiations)
         let timer = TimerFactory.makeTimePiece(clockType)
         let initialSeconds = await timer.totalSeconds
-        
         return await TimerCoordinator(
             timer: timer,
             seconds: initialSeconds,
@@ -56,33 +56,29 @@ class TimerCoordinator: ObservableObject {
 //    }
     
 /// "Timer Management"
-    func startClock() {   /// [Function][Timer][CoreVM][-> Void]
-        Task {
-            for await update in await betterNameTimer.start() {
-                self.secs = update.seconds
-                self.progress = update.progress
-                self.isRunning = true
-                
-                if update.seconds == 0 {
-                    await onZeroHapticAction()
-                }
+    func startClock() async throws {   /// Task cancellation, but simplified error handling
+        guard !Task.isCancelled else { return }
+        for await update in try await betterNameTimer.start() {
+            if Task.isCancelled { break }
+            
+            self.secs = update.seconds
+            self.progress = update.progress
+            self.isRunning = true
+            
+            if update.seconds == 0 {
+                await onZeroHapticAction()
             }
         }
     }
-//    await MainActor.run {
-//        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-//            showClock = true
-//        }
-//    }
+    
+    //    await MainActor.run {
+    //        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+    //            showClock = true
+    //        }
+    //    }
+    
 
-    func resetToStartAfterLeaving() { /// [Function][Timer][CoreVM][->Void]
-//        countDownAmt = 1200
-//        Task {
-//            await startClock()
-//            tetherCoordinator.showClock(true)
-//        }
-    }
-    func pauseTimer() async {    /// [Function][Timer][CoreVM][-> Void]
+    func pauseTimer() async {    /// No throws needed - pause can't fail
         await betterNameTimer.pause()
         isRunning = false
         showClock = false
@@ -94,18 +90,18 @@ class TimerCoordinator: ObservableObject {
         showClock = false
         secs = await betterNameTimer.totalSeconds
     }
-    
-    
-    
+
     ///         CLOCK STATE MANAGEMENT
     func switchTheClock(_ type: CountdownTypes) async {
+        /// Stop() does not throw, no need for do-try-catch
+        ///   TimerFactory can't fail (enum)
         await betterNameTimer.stop()
         betterNameTimer = TimerFactory.makeTimePiece(type)
         secs = await betterNameTimer.totalSeconds
         showClock = true
     }
      
-///// When Timer is Complete!
+///When Timer is Complete!
     func onZeroHapticAction() async {
         /// Haptics notify user, on main thread
         HapticStyle.medium.trigger()
@@ -118,29 +114,31 @@ class TimerCoordinator: ObservableObject {
         /// Handle state transition
         if case .secondTether(let coil) = coreVM.currentState {
             if !coil.tether1.isCompleted {
-                await tetherCoordinator.navigate(to: .tether1Modal)
+                tetherCoordinator.navigate(to: .tether1Modal)
             } else if !coil.tether2.isCompleted {
-                await tetherCoordinator.navigate(to: .tether2Modal)
+                tetherCoordinator.navigate(to: .tether2Modal)
             }
         }
     }
 ///Clearing State and UI
     func stopsCountdownClearsState() async {
         ///Use CountdownActor to stop timer completely
-        Task {
             await betterNameTimer.stop()
             isRunning = false
             showClock = false
             secs = await betterNameTimer.totalSeconds
         }
-    }
     
-    func resumeUserTimerFlow() async {
-        Task {
+    func resumeUserTimerFlow() async throws {
+        do {
             await switchTheClock(.production)
-            await startClock()
+            try await startClock()
             tetherCoordinator.currentModal = nil        ///Dismisses here, rather than in CoreView or ModalView
+        } catch {
+            ///Reset to save state
+            isRunning = false
+            showClock = false
+            tetherCoordinator.currentModal = nil
         }
     }
-
 }

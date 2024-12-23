@@ -13,9 +13,10 @@ protocol TimeProtocol: Actor {
     var totalSeconds: Int { get }
     var task: Task<Void, Never>? { get set }
     
+    /// Only start() needs throws b/c potential Task cancellation
     func start() async throws -> AsyncStream<(seconds: Int, progress: Float)>
-    func pause() async throws
-    func stop() async throws
+    func pause() async
+    func stop() async
     
 }
 
@@ -31,6 +32,7 @@ struct TimerUpdate {
 /// Default implementations for common timer/countdown logic
 extension TimeProtocol {
     /// Helper function to manage timer updates
+    ///   Needs do-catch b/c Task.sleep
     func createTimerStream() -> AsyncStream<(seconds: Int, progress: Float)> {
         AsyncStream { continuation  in
             task = Task<Void, Never> {      /// Task defined to non-throw
@@ -58,20 +60,17 @@ extension TimeProtocol {
     }
     
     func start() async throws -> AsyncStream<(seconds: Int, progress: Float)> {
-        do {
-            /// Cancel/clean up any existing timer
-            ///  then creates and returns a new stream
-            await cancelExistingTask()
-            /// Initialize timer state
-            isRunning = true
-            secondsRemaining = totalSeconds
-            //        progress = 1.0
-            
-            return createTimerStream()
-            } catch {
-            throw TimerError.invalidStateTransition
+        /// No try-catch b/c Task.sleep is only throw
+        /// Cancel/clean up any existing timer
+        ///  then creates and returns a new stream
+        await cancelExistingTask()
+        /// Initialize timer state
+        isRunning = true
+        secondsRemaining = totalSeconds
+        //        progress = 1.0
+        
+        return createTimerStream()
         }
-    }
     
     
     internal func cancelExistingTask() async {
