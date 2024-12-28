@@ -35,7 +35,7 @@ extension StorageManagerError: LocalizedError {
         case .encodingFailure: return "Data conversion failed"
         case .decodingFailure: return "Saved data is corrupted"
         case .invalidDataFormat: return "Data structure is incorrect"
-        case .storageAccessDenied: return "Storage permissions invalid"
+        case .storageAccessDenied: return "Storage permissions issue"
         }
     }
     

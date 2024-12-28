@@ -21,6 +21,7 @@ class TimerCoordinator: ObservableObject {
     private let tetherCoordinator: TetherCoordinator
     private let coreVM: CoreViewModel
     private var timeAsTask: Task<Void, Never>?
+    private var backgroundTask: UIBackgroundTaskIdentifier?
     
     /// State persistence keys
     private let timerStateKey = "timer_state"
@@ -59,7 +60,7 @@ class TimerCoordinator: ObservableObject {
     //        await TimerCoordinator(tetherCoordinator: TetherCoordinator())
     //    }
     
-    /// "Timer Management"
+    ///TIMER MANAGEMENT
     func startClock() async throws {   /// Task cancellation, but simplified error handling
         guard !Task.isCancelled else { return }
         for await update in try await betterNameTimer.start() {
@@ -95,7 +96,7 @@ class TimerCoordinator: ObservableObject {
         secs = await betterNameTimer.totalSeconds
     }
     
-    ///         CLOCK STATE MANAGEMENT
+    /// CLOCK STATE MANAGEMENT
     func switchTheClock(_ type: CountdownTypes) async {
         /// Stop() does not throw, no need for do-try-catch
         ///   TimerFactory can't fail (enum)
@@ -105,7 +106,7 @@ class TimerCoordinator: ObservableObject {
         showClock = true
     }
     
-    ///When Timer is Complete!
+    ///When Timer is Complete
     func onZeroHapticAction() async {
         /// Haptics notify user, on main thread
         HapticStyle.medium.trigger()
@@ -133,6 +134,7 @@ class TimerCoordinator: ObservableObject {
         secs = await betterNameTimer.totalSeconds
     }
     
+    //STATE PERSISTENCE and HANDLING
     func resumeUserTimerFlow() async throws {
         do {
             await switchTheClock(.production)
@@ -148,7 +150,7 @@ class TimerCoordinator: ObservableObject {
         }
     }
     
-    /// ScenePhase handling
+    ///ScenePhase handling
     func handleSceneTransition(_ phase: ScenePhase) async {
         switch phase {
         case .active:
