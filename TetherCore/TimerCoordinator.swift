@@ -22,6 +22,10 @@ class TimerCoordinator: ObservableObject {
     private let coreVM: CoreViewModel
     private var timeAsTask: Task<Void, Never>?
     
+    /// State persistence keys
+    private let timerStateKey = "timer_state"
+    private let secondsKey = "seconds_remaining"
+    
     static func create(
         tetherCoordinator: TetherCoordinator,
         coreVM: CoreViewModel,
@@ -51,11 +55,11 @@ class TimerCoordinator: ObservableObject {
     }
     
     ///Helper method to get a coordinator-less instance
-//    static func makeStandalone() async -> TimerCoordinator {
-//        await TimerCoordinator(tetherCoordinator: TetherCoordinator())
-//    }
+    //    static func makeStandalone() async -> TimerCoordinator {
+    //        await TimerCoordinator(tetherCoordinator: TetherCoordinator())
+    //    }
     
-/// "Timer Management"
+    /// "Timer Management"
     func startClock() async throws {   /// Task cancellation, but simplified error handling
         guard !Task.isCancelled else { return }
         for await update in try await betterNameTimer.start() {
@@ -77,7 +81,7 @@ class TimerCoordinator: ObservableObject {
     //        }
     //    }
     
-
+    
     func pauseTimer() async {    /// No throws needed - pause can't fail
         await betterNameTimer.pause()
         isRunning = false
@@ -90,7 +94,7 @@ class TimerCoordinator: ObservableObject {
         showClock = false
         secs = await betterNameTimer.totalSeconds
     }
-
+    
     ///         CLOCK STATE MANAGEMENT
     func switchTheClock(_ type: CountdownTypes) async {
         /// Stop() does not throw, no need for do-try-catch
@@ -100,8 +104,8 @@ class TimerCoordinator: ObservableObject {
         secs = await betterNameTimer.totalSeconds
         showClock = true
     }
-     
-///When Timer is Complete!
+    
+    ///When Timer is Complete!
     func onZeroHapticAction() async {
         /// Haptics notify user, on main thread
         HapticStyle.medium.trigger()
@@ -120,25 +124,77 @@ class TimerCoordinator: ObservableObject {
             }
         }
     }
-///Clearing State and UI
+    ///Clearing State and UI
     func stopsCountdownClearsState() async {
         ///Use CountdownActor to stop timer completely
-            await betterNameTimer.stop()
-            isRunning = false
-            showClock = false
-            secs = await betterNameTimer.totalSeconds
-        }
+        await betterNameTimer.stop()
+        isRunning = false
+        showClock = false
+        secs = await betterNameTimer.totalSeconds
+    }
     
     func resumeUserTimerFlow() async throws {
         do {
             await switchTheClock(.production)
             try await startClock()
             tetherCoordinator.currentModal = nil        ///Dismisses here, rather than in CoreView or ModalView
+            await saveTimerState()                      ///Saves state AFTER successful resume
         } catch {
             ///Reset to save state
             isRunning = false
             showClock = false
             tetherCoordinator.currentModal = nil
+            UserDefaults.standard.removeObject(forKey: timerStateKey)
         }
+    }
+    
+    /// ScenePhase handling
+    func handleSceneTransition(_ phase: ScenePhase) async {
+        switch phase {
+        case .active:
+            await restoreTimerState()
+        case .inactive:
+            await pauseTimer()
+        case .background:
+            await saveTimerState()
+        @unknown default:
+            break
+        }
+    }
+    
+    private func saveTimerState() async {
+        let state = TimerState(
+            isRunning: isRunning,
+            remainingSeconds: secs,
+            showClock: showClock
+        )
+        
+        if let encoded = try? JSONEncoder().encode(state) {
+            UserDefaults.standard.set(encoded, forKey: timerStateKey)
+        }
+        
+        await betterNameTimer.pause()
+    }
+    
+    private func restoreTimerState() async {
+        guard let data = UserDefaults.standard.data(forKey: timerStateKey),
+              let state = try? JSONDecoder().decode(TimerState.self, from: data) else {
+            return
+        }
+        
+        if state.isRunning {
+            await switchTheClock(.production)
+            try? await startClock()
+        }
+        
+        self.secs = state.remainingSeconds
+        self.showClock = state.showClock
+    }
+    
+    // Timer state struct
+    private struct TimerState: Codable {
+        let isRunning: Bool
+        let remainingSeconds: Int
+        let showClock: Bool
     }
 }

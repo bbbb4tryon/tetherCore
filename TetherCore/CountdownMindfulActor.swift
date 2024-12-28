@@ -1,5 +1,5 @@
 //
-//  CoundownMindfulActor.swift
+//  CountdownMindfulActor.swift
 //  TetherCore
 //
 //  Created by Benjamin Tryon on 12/8/24.
@@ -7,7 +7,7 @@
 
 import Foundation
 
-actor CoundownMindfulActor: TimeProtocol {
+actor CountdownMindfulActor: TimeProtocol {
     var task: Task<Void, Never>?
     var isRunning = false
     var secondsRemaining: Int

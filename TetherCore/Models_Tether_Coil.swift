@@ -43,3 +43,13 @@ struct Coil: Identifiable, Codable, Equatable {
     }
 }
 
+///Toggle if the user wants to display the date in the Profile list
+//struct Toggle {
+//    let coil: Coil
+//    var on: Bool
+//    
+//    func toToggle() {
+//        coil.formattedTimestamp.timeZone
+//    }
+//}
+

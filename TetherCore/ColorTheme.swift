@@ -19,8 +19,9 @@ struct ColorTheme {
     let accentSalmon = Color("accentSalmon")
     
     // Semantic colors for specific use cases
-    let tetherBackground = Color("primaryBlue").opacity(0.1)
-    let outlineBackground = Color("secondaryGreen").opacity(0.1)
+    let tetherBackground = Color("primaryBlue").opacity(0.5)
+    let timerBackground = Color("secondaryGreen").opacity(0.5)
     let buttonBackground = Color("primaryBlue")
     let buttonText = Color("Background")
+    let component = Color("accentSalmon").opacity(0.8)
 }

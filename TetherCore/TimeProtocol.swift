@@ -102,7 +102,7 @@ enum TimerFactory {
         switch type {
         case .production: return CountdownActor()
         case .six: return Countdown6Actor()
-        case .mind: return CoundownMindfulActor()
+        case .mind: return CountdownMindfulActor()
         }
     }
 }

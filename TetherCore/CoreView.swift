@@ -26,7 +26,7 @@ struct CoreView: View {                                         ///Conforms to E
         self.countdownType = countdownType                      /// Store it ^^
         _coreVM = StateObject(wrappedValue: CoreViewModel(
             clockType: countdownType,
-            tetherCoordinator: TetherCoordinator()
+            tetherCoordinator: TetherCoordinator()                            /// nil injects tetherCoordinator onAppear
         ))
     }
     
@@ -98,7 +98,7 @@ struct CoreView: View {                                         ///Conforms to E
                     }
                 
                 //VSTACK ENDS
-                .continuationOverlay(coordinator: tetherCoordinator, coreVM: coreVM)
+                    .loadingOverlay(isLoading: coreVM.isLoading)
             }
         }
         .onAppear {
@@ -178,7 +178,7 @@ struct CoreView: View {                                         ///Conforms to E
                 .fill(Color.theme.primaryBlue)
         )
         .shadow(radius: 5)
-        .opacity(coreVM.currentState == .empty ? 0.6 : 1)        /// or coreVM.currentTetherText.isEmpty?
+        .opacity(coreVM.currentTetherText.isEmpty ? 0.6 : 1)            ///Don't use .empty - the Tether/Coil associated values in TetherState complicate equality comparison (meaning == .empty)
         .animation(.easeInOut, value: coreVM.currentTetherText.isEmpty)
     }
     
@@ -207,14 +207,13 @@ struct CoreView: View {                                         ///Conforms to E
 }
     
 extension View {
-    func continuationOverlay(
-        coordinator: TetherCoordinator,
-        coreVM: CoreViewModel
+    func loadingOverlay(
+        isLoading: Bool
     ) -> some View {
         
         overlay {
-            if coreVM.currentState.needsRestoration {
-                ContinueOverlay(coreVM: coreVM)
+            if isLoading {
+                LoadingOverlay()
             }
         }
     }
@@ -227,6 +226,3 @@ extension View {
         .environmentObject(coordinator)
         .environment(\.colorScheme, .light)
 }
-//func validate(){
-//    guard !coreVM.currentTetherText.isEmpty else { return }
-//}

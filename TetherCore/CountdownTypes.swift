@@ -17,7 +17,7 @@ enum CountdownTypes {   /// Don't add throws or initalizations - screws up Timer
         switch self {
         case .production: return CountdownActor()
         case .six: return Countdown6Actor()
-        case .mind: return CoundownMindfulActor()
+        case .mind: return CountdownMindfulActor()
         }
     }
 }

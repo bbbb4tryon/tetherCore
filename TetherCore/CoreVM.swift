@@ -12,11 +12,16 @@ import SwiftUI
 @MainActor
 class CoreViewModel: ObservableObject { ///State Managment confined to main thread; good
     
-    enum TetherState: Equatable {
+    enum TetherState {
         case empty                  /// Nothing entered
         case firstTether(Tether)    /// First Tether entered
         case secondTether(Coil)     /// Both tethers in coil, not completed
         case completed(Coil)        /// Coil with completion status
+        
+        private enum CodingKeys: String, CodingKey {
+            case type, tether, coil
+        }
+        
         
         ///Helper computed properties
         var hasFirstTether: Bool {
@@ -49,6 +54,47 @@ class CoreViewModel: ObservableObject { ///State Managment confined to main thre
             case .completed: return false
             }
         }
+//        
+//        func encode(to encoder: Encoder) throws {
+//            var container = encoder.container(keyedBy: CodingKeys.self)
+//            switch self {
+//            case .empty:
+//                try container.encode("empty", forKey: .type)
+//            case .firstTether(let tether):
+//                try container.encode("firstTether", forKey: .type)
+//                try container.encode(tether, forKey: .tether)
+//            case .secondTether(let coil):
+//                try container.encode("secondTether", forKey: .type)
+//                try container.encode(coil, forKey: .coil)
+//            case .completed(let coil):
+//                try container.encode("completed", forKey: .type)
+//                try container.encode(coil, forKey: .coil)
+//            }
+//        }
+//        
+//        init(from decoder:Decoder) throws {
+//            let container = try decoder.container(keyedBy: CodingKeys.self)
+//            let type = try container.decode(String.self, forKey: .type)
+//            
+//            switch type {
+//            case "empty":
+//                self = .empty
+//            case "firstTether":
+//                let tether = try container.decode(Tether.self, forKey: .tether)
+//                self = .firstTether(tether)
+//            case "secondTether":
+//                let coil = try container.decode(Coil.self, forKey: .coil)
+//                self = .secondTether(coil)
+//            case "completed":
+//                let coil = try container.decode(Coil.self, forKey: .coil)
+//                self = .completed(coil)
+//            default:
+//                throw DecodingError.dataCorrupted(.init(
+//                    codingPath: container.codingPath,
+//                    debugDescription: "Invalid type value: \(type)"
+//                ))
+//            }
+//        }
     }
     
     /// Types of the limits (at correctly stated at the 'type level'
@@ -56,7 +102,7 @@ class CoreViewModel: ObservableObject { ///State Managment confined to main thre
         static let inputLimit = 160
     }
     
-//    @EnvironmentObject var coordinator: TetherCoordinator
+    @Published private(set) var isLoading = false
     @Published private(set) var error: GlobalError?
     @Published var currentTetherText: String = ""
     @Published var showClock: Bool = false
@@ -69,14 +115,7 @@ class CoreViewModel: ObservableObject { ///State Managment confined to main thre
     private let storage: StorageManager
     private let baseClock: any TimeProtocol
     private var timerCoordinator: TimerCoordinator?         /// Optional; is VAR now because of this
-    
-    
-    ///DELETE NOW?
-//    @Published var currentModal: ModalType?
-    
-//    testing: Bool = false; @Published var isTesting: Bool = false;  self.isTesting = testing  /// Track testing state; if testing {
-//        setupTestData()
-//    }
+
     
     /// Necessary - keeps initialization of actors and dependencies
     init(
@@ -117,26 +156,43 @@ class CoreViewModel: ObservableObject { ///State Managment confined to main thre
     
 
     //MARK: Actions
+    ///Loading app or app is thinking
+    func setLoading(_ loading: Bool){
+        isLoading = loading
+    }
+    
     /// Flow of tethers/input -BUSINESS Logic Layer
     func submitTether() async throws {
-        ///Generates error; validates input
-        guard !currentTetherText.isEmpty else { throw StateTransitionError.invalidStateChange }
+        ///Loading visual
+        setLoading(true)
+        defer { setLoading(false) }
+        
+        ///Validates input or Generates error
+        guard !currentTetherText.isEmpty else {
+            throw StateTransitionError.invalidStateChange
+        }
         let newTether = Tether(tetherText: currentTetherText)
         
         switch currentState {
         case .empty:
             currentState = .firstTether(newTether)
-    
+            
         case .firstTether(let firstTether):
             let coil = Coil(tether1: firstTether, tether2: newTether)
             currentState = .secondTether(coil)
             do {
-                try? await storage.saveCoil(coil)
-                try await baseClock.start()
+                try await storage.saveCoil(coil)                ///removing 'try?' exposes actual errors for handling
+                let _ = try await baseClock.start()                     ///Must use start() return value 'AsyncStream', so capture it, deliberately discard it
                 tetherCoordinator.navigate(to: .tether1Modal)
-        } catch {
-            self.error = CoreVMError.storageFailure
-        }
+            } catch {
+                switch error {
+                case let globalError as GlobalError:
+                    ///Handle TypeA error/GlobalError
+                    self.error = globalError
+                default:
+                    self.error = CoreVMError.storageFailure
+                }
+            }
             /// Already have both tethers, ignore additional submissions
         case .secondTether, .completed:
             break
@@ -255,7 +311,7 @@ class CoreViewModel: ObservableObject { ///State Managment confined to main thre
             
             /// Note: resumeUserTimerFlow() already handles returningUser completion
         case (.returningUser, .complete):
-            try await timerCoordinator?.resumeUserTimerFlow()
+            try? await timerCoordinator?.resumeUserTimerFlow()
         }
     }
     
@@ -274,6 +330,15 @@ class CoreViewModel: ObservableObject { ///State Managment confined to main thre
 }
 
 
+// Insert above the init():
+//    @Published var currentModal: ModalType?
+
+//    testing: Bool = false; @Published var isTesting: Bool = false;  self.isTesting = testing  /// Track testing state; if testing {
+//        setupTestData()
+//    }
+
+
+
 //    ///Testing Data Management
 //    private func setupTestData() {
 //        let tether1 = Tether(tetherText: "Walk the dog")
@@ -282,3 +347,4 @@ class CoreViewModel: ObservableObject { ///State Managment confined to main thre
 //        self.showClock = true
 //        self.currentModal = .tether1
 //    }
+

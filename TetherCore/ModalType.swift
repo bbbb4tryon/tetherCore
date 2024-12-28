@@ -7,7 +7,7 @@
 
 import Foundation
 
-enum ModalType: Identifiable {
+enum ModalType: String, Codable, Identifiable { /// Conform to Codable using String raw values
     case returningUser
     case tether1
     case tether2
@@ -16,5 +16,5 @@ enum ModalType: Identifiable {
     case mindfulness
     case social
     
-    var id: String { String(describing: self) }
+    var id: String { rawValue }
 }

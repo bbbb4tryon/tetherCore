@@ -7,12 +7,16 @@
 
 import Foundation
 import SwiftUI
+import UIKit
 
 @main
 struct TetherCoreApp: App {
+    @StateObject private var tetherCoordinator = TetherCoordinator()
+    
     var body: some Scene {
         WindowGroup {
             MainTabView()
+                .environmentObject(tetherCoordinator)
         }
     }
 }

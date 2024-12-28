@@ -76,7 +76,7 @@ struct ModalView: View {
     
     var social_Buttons: some View {
         VStack(spacing: 16) {
-            if case .secondTether(let coil) = coreVM.currentState {
+            if case .secondTether(_) = coreVM.currentState {    ///underscore pattern matching instead of 'let coil' preserves type safety, ignores unused values 
                 Button("Share Achievement") {
                 }
                 .buttonStyle(.borderedProminent)
@@ -137,54 +137,66 @@ struct ModalView: View {
     }
     
     var returningUser_Buttons: some View {
-        VStack(spacing: 20) {
-            Text("Welcome Back!")
-                .font(.title)
-                .foregroundStyle(Color.theme.primaryBlue)
-            
-            ///Show current state/progress
-            if case .secondTether(let coil) = coreVM.currentState {
-                Text("You have a session in progress")
-                    .foregroundStyle(Color.theme.secondaryGreen)
+        VStack(spacing: 24){
+            /// A clear hierarchy with session info
+            VStack(spacing: 16) {
+                Text("Welcome Back!")
+                    .font(.title)
+                    .fontWeight(.bold)
+                    .foregroundStyle(Color.theme.primaryBlue)
                 
+                ///Show current state/progress
+                if case .secondTether(let coil) = coreVM.currentState {
+                    /// Show actual user progress
+                    VStack(spacing: 8){
+                        HStack {
+                            Text("Current Progress")
+                                .fontWeight(.medium)
+                            Spacer()
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 4){
+                            Text("􀓩 \(coil.tether1.tetherText)")
+                                .strikethrough(coil.tether1.isCompleted)
+                            Text("􀓩 \(coil.tether2.tetherText)")
+                                .strikethrough(coil.tether2.isCompleted)
+                        }
+                        .foregroundStyle(Color.black)
+                    }
+                    .padding()
+                    .background(Color.theme.secondaryGreen.opacity(0.1))
+                    .cornerRadius(8)
+                }
+            }
+            /// A clear hierarchy
+            VStack(spacing: 12) {
                 Button(action: {
                     Task { @MainActor in
-                        await coordinator.resumeUserTimerFlow()
+                        try await coordinator.resumeUserTimerFlow()
                     }
-            }, label: {
-                    Text("Continue Session")
+                }, label: {
+                    Text("Resume Your Session")
                         .fontWeight(.semibold)
-                        .foregroundStyle(Color.theme.buttonText)
                         .frame(maxWidth: .infinity)
                         .padding()
                         .background(Color.theme.primaryBlue)
+                        .foregroundStyle(Color.theme.buttonText)
                         .cornerRadius(10)
                 }
-            )
+                )
                 
-                // Clear data button
+                ///Start over button, includes a confirmation
                 Button(action: {
                     showEraseConfirmation = true
                 }) {
-                    Text("Start Over")
+                    Text("Delete & Start Over")
                         .foregroundStyle(Color.theme.accentSalmon)
-                }
-                .alert("Clear All Data?", isPresented: $showEraseConfirmation) {
-                    Button("Cancel", role: .cancel) { }
-                    Button("Clear", role: .destructive) {
-                        Task {
-                            await coreVM.clearEverythingFromUI()
-                            dismiss()
-                        }
-                    }
-                    .foregroundStyle(Color.red)
-                } message: {
-                    Text("This will clear all entered data and reset the timer.")
                 }
             }
         }
     }
 }
+
 enum ModalAction {
     case complete
     case inProgress

@@ -7,6 +7,9 @@
 
 import SwiftUI
 import Foundation
+                                                            ///CoreViewModel already has a tetherCoordinator from init
+                                                            ///TimerCoordinator needs both tetherCoordinator and coreVM
+                                                            ///TetherCoordinator manages timer lifecycle
                                                             ///Coordinator Pattern to improve modal flow
 @MainActor                                                  ///Explicitly MainActor because UI updates
 class TetherCoordinator: ObservableObject {
@@ -14,6 +17,7 @@ class TetherCoordinator: ObservableObject {
     @Published private(set) var error: CoordinatorError?    ///Uses published property for error state
     @Published var showClock: Bool = false
     private var timerCoordinator: TimerCoordinator?         ///Correct: Optional & with late initialization
+    private let storageManager = StorageManager()           ///StorageManager instance for handleScenePhase)
 //    @Published var total20: Int = 1200
 //    @Published var progress: Float = 0.0
     
@@ -48,7 +52,6 @@ class TetherCoordinator: ObservableObject {
         case .tether2Modal: currentModal = .tether2
         case .completionModal: currentModal = .completion
         case .socialModal: currentModal = .social
-        default: break
         }
     }
     
@@ -103,7 +106,63 @@ class TetherCoordinator: ObservableObject {
     }
     
     /// Optional, see TimerCoordinator initialization at the top
-    func resumeUserTimerFlow() async {
-        await timerCoordinator?.resumeUserTimerFlow()
+    func resumeUserTimerFlow() async throws {
+        guard let coordinator = timerCoordinator else {
+            throw CoordinatorError.timerCoordinatorMissing
+        }
+        try await timerCoordinator?.resumeUserTimerFlow()
     }
+//    
+//    /// Scene phase handling
+//    func handleScenePhase(_ phase: ScenePhase) async {
+//        switch phase {
+//        case .active:
+//            await handleActiveState()
+//        case .inactive:
+//            await handleInactiveState()
+//        case .background:
+//            await handleBackgroundState()
+//        @unknown default: break
+//        }
+//    }
+//    
+//    /// Resume from background, if needed
+//    private func handleActiveState() async {
+//        do {
+//            let coils = try await storageManager.loadCoils()
+//            if let lastCoil = coils.first {
+//                handleReturningUser(.secondTether(lastCoil))
+//            }
+//        } catch {
+//            self.error = .invalidStateTransition
+//        }
+//    }
+//    
+//    private func handleInactiveState() async {
+//        await timerCoordinator?.pauseTimer()
+//    }
+//    
+//    private func handleBackgroundState() async {
+//        /// Create state snapshot
+//        let snapshot = StateSnapshot(
+//            modal: currentModal,
+//            timestamp: Date()
+//        )
+//        
+//        do {
+//        /// Save current state
+//            let data = try JSONEncoder().encode(snapshot)
+//            UserDefaults.standard.set(data, forKey: "saved_state")
+//            } catch {
+//                self.error = .invalidStateTransition
+//            }
+//        
+//        await timerCoordinator?.stopsCountdownClearsState()
+//    }
 }
+//
+//private struct StateSnapshot: Codable {     /// Creates "clean" state persistence
+//    let modal: ModalType?
+//    let timestamp: Date
+//}
+
